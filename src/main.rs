@@ -22,7 +22,7 @@ fn annotate_duplications(t: &mut Tree) {
         let species: Vec<HashSet<_>> = children
             .iter()
             .map(|&c| {
-                t.leaves_for(c)
+                t.leaves_of(c)
                     .iter()
                     .map(|&n| {
                         t[n].name
@@ -37,13 +37,14 @@ fn annotate_duplications(t: &mut Tree) {
             })
             .collect();
         let d = species.iter().skip(1).any(|x| !x.is_disjoint(&species[0]));
-        assert!(species.len() == 2);
-        let dcs = jaccard(&species[0], &species[1]);
-        if d {
-            t[*n].data.insert("D".to_string(), "Y".to_owned());
-            t[*n].data.insert("DCS".to_string(), dcs.to_string());
-        } else {
-            t[*n].data.insert("D".to_string(), "N".to_owned());
+        if species.len() == 2 {
+            let dcs = jaccard(&species[0], &species[1]);
+            if d {
+                t[*n].data.insert("D".to_string(), "Y".to_owned());
+                t[*n].data.insert("DCS".to_string(), dcs.to_string());
+            } else {
+                t[*n].data.insert("D".to_string(), "N".to_owned());
+            }
         }
     });
 }
