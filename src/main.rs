@@ -77,8 +77,12 @@ fn effective_losses(
                         .collect::<Vec<_>>()
                 );
             }
-            missing.retain(|x| !species.leaves_of(mrca.unwrap()).contains(x));
-            r += 1;
+            if let Some(mrca) = mrca {
+                    missing.retain(|x| !species.leaves_of(mrca).contains(x));
+                    r += 1;
+            } else {
+                return r + 1;
+            }
         }
         r
     }
