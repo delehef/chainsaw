@@ -22,8 +22,8 @@ fn effective_losses(
     b: &HashSet<String>,
     species: &Tree,
     restricted_species: &HashSet<usize>,
-    log: bool
-) -> i32 {
+    log: bool,
+) -> usize {
     let missing_left = a.difference(&b).collect::<HashSet<_>>();
     let missing_right = b.difference(&a).collect::<HashSet<_>>();
     if log {
@@ -37,7 +37,7 @@ fn effective_losses(
         species: &Tree,
         restricted_species: &HashSet<usize>,
         log: bool,
-    ) -> i32 {
+    ) -> usize {
         if missing.is_empty() {
             return 0;
         }
@@ -55,34 +55,40 @@ fn effective_losses(
             .collect::<Vec<_>>();
 
         while !missing.is_empty() {
-            let mut mrca = Some(missing[0]);
+            let mut mrca = missing[0];
+            let mut current: Vec<usize> = vec![mrca];
+            dbg!(&current);
 
-            while mrca.is_some()
-                && species
-                    .leaves_of(mrca.unwrap())
-                    .iter()
-                    .all(|x| missing.contains(x) || !restricted_species.contains(x))
-            {
-                mrca = mrca.and_then(|m| species.parent(m));
+            'goup: loop {
+                let candidates = species
+                    .leaves_of(mrca)
+                    .into_iter()
+                    .filter(|x| !restricted_species.contains(x))
+                    .collect::<Vec<_>>();
+
+                if !candidates.is_empty() && candidates.iter().all(|x| missing.contains(x)) {
+                    current = candidates.clone();
+                } else {
+                    break 'goup;
+                }
+
+                if let Some(new_mrca) = species.parent(mrca) {
+                    mrca = new_mrca;
+                } else {
+                    println!("BREAKING");
+                    break 'goup;
+                }
             }
 
-            if log {
-                eprintln!(
-                    "Loss #{}: {:?}",
-                    r,
-                    species
-                        .leaves_of(mrca.unwrap())
-                        .iter()
-                        .map(|n| species[*n].name.as_ref().unwrap())
-                        .collect::<Vec<_>>()
-                );
+            if true {
+                eprintln!("Loss #{}: {:?}", current.len(), current);
             }
-            if let Some(mrca) = mrca {
-                    missing.retain(|x| !species.leaves_of(mrca).contains(x));
-                    r += 1;
-            } else {
-                return r + 1;
+            if current.len() > 1 {
+                r += current.len();
             }
+
+
+            missing.retain(|x| !current.contains(x));
         }
         r
     }
@@ -152,7 +158,7 @@ fn annotate_duplications(t: &mut Tree, species_tree: &Tree, filter_species: bool
             let d = species.iter().skip(1).any(|x| !x.is_disjoint(&species[0]));
             if d {
                 let dcs = jaccard(&species[0], &species[1]);
-                let log = (dcs == 0.33846155);
+                let log = dcs == 0.33846155;
                 if log {
                     println!("\n\n\n\n\nDUP: {}", dcs);
                     println!("LEFT: {:#?}", &species[0]);
