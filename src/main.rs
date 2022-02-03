@@ -63,7 +63,7 @@ fn effective_losses(
                 let candidates = species
                     .leaves_of(mrca)
                     .into_iter()
-                    .filter(|x| !restricted_species.contains(x))
+                    .filter(|x| actual_species.contains(x))
                     .collect::<Vec<_>>();
 
                 if !candidates.is_empty() && candidates.iter().all(|x| missing.contains(x)) {
