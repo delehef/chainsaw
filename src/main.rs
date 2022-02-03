@@ -21,30 +21,27 @@ fn effective_losses(
     a: &HashSet<String>,
     b: &HashSet<String>,
     species: &Tree,
-    restricted_species: &HashSet<usize>,
-    log: bool,
-) -> usize {
+    actual_species: &HashSet<usize>,
+) -> (usize, usize) {
     let missing_left = a.difference(&b).collect::<HashSet<_>>();
     let missing_right = b.difference(&a).collect::<HashSet<_>>();
-    if log {
-        println!("\n\n");
-        dbg!(&missing_left);
-        dbg!(&missing_right);
-    }
 
     fn els_oneside(
         missing: &HashSet<&String>,
         species: &Tree,
-        restricted_species: &HashSet<usize>,
-        log: bool,
-    ) -> usize {
+        actual_species: &HashSet<usize>,
+    ) -> (usize, usize) {
+        fn id2names(xs: &[usize], s: &Tree) -> Vec<String> {
+            xs.iter()
+                .map(|x| s[*x].name.as_ref().unwrap().to_owned())
+                .collect::<Vec<_>>()
+        }
+
         if missing.is_empty() {
-            return 0;
+            return (0, 0);
         }
-        let mut r = 0;
-        if log {
-            println!("Processing {:?}", missing);
-        }
+        let mut r_large = 0;
+        let mut r_all = 0;
         let mut missing = missing
             .iter()
             .map(|x| {
@@ -53,11 +50,12 @@ fn effective_losses(
                     .unwrap()
             })
             .collect::<Vec<_>>();
+        // println!("\n\n\nProcessing {:?}", id2names(&missing, &species));
 
         while !missing.is_empty() {
             let mut mrca = missing[0];
             let mut current: Vec<usize> = vec![mrca];
-            dbg!(&current);
+            // println!("Current: {:?}", id2names(&current, &species));
 
             'goup: loop {
                 let candidates = species
@@ -65,6 +63,7 @@ fn effective_losses(
                     .into_iter()
                     .filter(|x| actual_species.contains(x))
                     .collect::<Vec<_>>();
+                // println!("Candidates: {:?}", id2names(&candidates, &species));
 
                 if !candidates.is_empty() && candidates.iter().all(|x| missing.contains(x)) {
                     current = candidates.clone();
@@ -75,31 +74,28 @@ fn effective_losses(
                 if let Some(new_mrca) = species.parent(mrca) {
                     mrca = new_mrca;
                 } else {
-                    println!("BREAKING");
                     break 'goup;
                 }
             }
 
-            if true {
-                eprintln!("Loss #{}: {:?}", current.len(), current);
-            }
+            // eprintln!(
+            //     "Loss |{}|: {:?}",
+            //     current.len(),
+            //     id2names(&current, &species)
+            // );
+            r_all += 1;
             if current.len() > 1 {
-                r += current.len();
+                r_large += 1;
             }
-
 
             missing.retain(|x| !current.contains(x));
         }
-        r
+        (r_all, r_large)
     }
 
-    let lr = els_oneside(&missing_left, species, restricted_species, log);
-    let ll = els_oneside(&missing_right, species, restricted_species, log);
-    if log {
-        dbg!(lr);
-        dbg!(ll);
-    }
-    lr + ll
+    let (lr_all, lr_large) = els_oneside(&missing_left, species, actual_species);
+    let (rr_all, rr_large) = els_oneside(&missing_right, species, actual_species);
+    (lr_all + rr_all, lr_large + rr_large)
 }
 
 fn annotate_duplications(t: &mut Tree, species_tree: &Tree, filter_species: bool) {
@@ -158,26 +154,16 @@ fn annotate_duplications(t: &mut Tree, species_tree: &Tree, filter_species: bool
             let d = species.iter().skip(1).any(|x| !x.is_disjoint(&species[0]));
             if d {
                 let dcs = jaccard(&species[0], &species[1]);
-                let log = dcs == 0.33846155;
-                if log {
-                    println!("\n\n\n\n\nDUP: {}", dcs);
-                    println!("LEFT: {:#?}", &species[0]);
-                    println!("RGHT: {:#?}", &species[1]);
-                }
-                let elc = effective_losses(
+                let (elc_all, elc_large) = effective_losses(
                     &species[0],
                     &species[1],
                     species_tree,
                     restricted_species.as_ref().unwrap(),
-                    log,
                 );
-                if log {
-                    dbg!(elc);
-                    dbg!(elc.to_string());
-                }
                 t[*n].data.insert("D".to_string(), "Y".to_owned());
                 t[*n].data.insert("DCS".to_string(), dcs.to_string());
-                t[*n].data.insert("ELC".to_string(), elc.to_string());
+                t[*n].data.insert("ELC".to_string(), elc_all.to_string());
+                t[*n].data.insert("ELCL".to_string(), elc_large.to_string());
             } else {
                 t[*n].data.insert("D".to_string(), "N".to_owned());
             }
