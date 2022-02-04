@@ -5,8 +5,6 @@ use std::fs::File;
 use std::hash::Hash;
 use std::io::prelude::*;
 use std::io::{BufRead, BufReader};
-use std::path::Path;
-use std::thread::current;
 
 use anyhow::{Context, Result};
 
@@ -116,23 +114,6 @@ fn annotate_duplications(t: &mut Tree, species_tree: &Tree, filter_species: bool
     };
     t.inners().collect::<Vec<_>>().iter().for_each(|n| {
         let children = t[*n].children.as_ref().unwrap();
-        let genes: Vec<HashSet<_>> = children
-            .iter()
-            .map(|&c| {
-                t.leaves_of(c)
-                    .iter()
-                    .map(|&n| {
-                        t[n].name
-                            .as_ref()
-                            .unwrap()
-                            .split('#')
-                            .nth(0)
-                            .unwrap()
-                            .to_owned()
-                    })
-                    .collect()
-            })
-            .collect();
         let species: Vec<HashSet<_>> = children
             .iter()
             .map(|&c| {
@@ -163,7 +144,7 @@ fn annotate_duplications(t: &mut Tree, species_tree: &Tree, filter_species: bool
                 t[*n].data.insert("D".to_string(), "Y".to_owned());
                 t[*n].data.insert("DCS".to_string(), dcs.to_string());
                 t[*n].data.insert("ELC".to_string(), elc_all.to_string());
-                t[*n].data.insert("ELCL".to_string(), elc_large.to_string());
+                t[*n].data.insert("ELLC".to_string(), elc_large.to_string());
             } else {
                 t[*n].data.insert("D".to_string(), "N".to_owned());
             }
