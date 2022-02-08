@@ -178,12 +178,10 @@ fn main() -> Result<()> {
             let mut out = String::new();
             let species_tree =
                 Tree::from_filename(&value_t!(args, "species-tree", String).unwrap()).unwrap();
-            for l in BufReader::new(File::open(&filename)?).lines() {
-                let mut t = Tree::from_string(&l?)?;
-                annotate_duplications(&mut t, &species_tree, true);
-                out.push_str(&t.to_string());
-                out.push_str("\n");
-            }
+            let mut t = Tree::from_string(&std::fs::read_to_string(&filename)?)?;
+            annotate_duplications(&mut t, &species_tree, true);
+            out.push_str(&t.to_string());
+            out.push_str("\n");
 
             File::create(&filename)?
                 .write_all(out.as_bytes())
