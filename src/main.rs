@@ -12,7 +12,7 @@ fn jaccard<T>(a: &HashSet<T>, b: &HashSet<T>) -> f32
 where
     T: Eq + Hash,
 {
-    a.intersection(b).collect::<Vec<_>>().len() as f32 / a.union(b).collect::<Vec<_>>().len() as f32
+    a.intersection(b).count() as f32 / a.union(b).count() as f32
 }
 
 fn effective_losses(
@@ -21,8 +21,8 @@ fn effective_losses(
     species: &Tree,
     actual_species: &HashSet<usize>,
 ) -> (usize, usize) {
-    let missing_left = a.difference(&b).collect::<HashSet<_>>();
-    let missing_right = b.difference(&a).collect::<HashSet<_>>();
+    let missing_left = a.difference(b).collect::<HashSet<_>>();
+    let missing_right = b.difference(a).collect::<HashSet<_>>();
 
     fn els_oneside(
         missing: &HashSet<&String>,
@@ -181,7 +181,7 @@ fn main() -> Result<()> {
             let mut t = Tree::from_string(&std::fs::read_to_string(&filename)?)?;
             annotate_duplications(&mut t, &species_tree, true);
             out.push_str(&t.to_string());
-            out.push_str("\n");
+            out.push('\n');
 
             File::create(&filename)?
                 .write_all(out.as_bytes())
