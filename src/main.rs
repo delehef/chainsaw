@@ -38,6 +38,13 @@ fn effective_losses(
         if missing.is_empty() {
             return (0, 0);
         }
+
+
+        let log = missing.contains(&"Dasypus.novemcinctus".to_string());
+        if log {
+            println!("\n\n\nProcessing {:?}", missing);
+        }
+
         let mut r_large = 0;
         let mut r_all = 0;
         let mut missing = missing
@@ -48,12 +55,13 @@ fn effective_losses(
                     .unwrap()
             })
             .collect::<Vec<_>>();
-        // println!("\n\n\nProcessing {:?}", id2names(&missing, &species));
 
         while !missing.is_empty() {
             let mut mrca = missing[0];
             let mut current: Vec<usize> = vec![mrca];
-            // println!("Current: {:?}", id2names(&current, &species));
+            if log {
+                println!("Current: {:?}", id2names(&current, &species));
+            }
 
             'goup: loop {
                 let candidates = species
@@ -61,7 +69,9 @@ fn effective_losses(
                     .into_iter()
                     .filter(|x| actual_species.contains(x))
                     .collect::<Vec<_>>();
-                // println!("Candidates: {:?}", id2names(&candidates, &species));
+                if log {
+                    println!("Candidates: {:?}", id2names(&candidates, &species));
+                }
 
                 if !candidates.is_empty() && candidates.iter().all(|x| missing.contains(x)) {
                     current = candidates.clone();
@@ -76,11 +86,13 @@ fn effective_losses(
                 }
             }
 
-            // eprintln!(
-            //     "Loss |{}|: {:?}",
-            //     current.len(),
-            //     id2names(&current, &species)
-            // );
+            if log{
+                eprintln!(
+                    "Loss |{}|: {:?}",
+                    current.len(),
+                    id2names(&current, &species)
+                );
+            }
             r_all += 1;
             if current.len() > 1 {
                 r_large += 1;
