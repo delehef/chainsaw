@@ -40,7 +40,7 @@ fn effective_losses(
         }
 
 
-        let log = missing.contains(&"Dasypus.novemcinctus".to_string());
+        let log = false; // missing.contains(&"Dasypus.novemcinctus".to_string());
         if log {
             println!("\n\n\nProcessing {:?}", missing);
         }
