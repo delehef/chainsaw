@@ -4,7 +4,6 @@ use std::collections::HashSet;
 use std::fs::File;
 use std::hash::Hash;
 use std::io::prelude::*;
-use std::io::{BufRead, BufReader};
 
 use anyhow::{Context, Result};
 
@@ -18,7 +17,7 @@ where
 fn effective_losses(
     a: &HashSet<String>,
     b: &HashSet<String>,
-    species: &Tree,
+    species: &NewickTree,
     actual_species: &HashSet<usize>,
 ) -> (usize, usize) {
     let missing_left = a.difference(b).collect::<HashSet<_>>();
@@ -26,19 +25,18 @@ fn effective_losses(
 
     fn els_oneside(
         missing: &HashSet<&String>,
-        species: &Tree,
+        species: &NewickTree,
         actual_species: &HashSet<usize>,
     ) -> (usize, usize) {
-        fn id2names(xs: &[usize], s: &Tree) -> Vec<String> {
+        fn id2names(xs: &[usize], s: &NewickTree) -> Vec<String> {
             xs.iter()
-                .map(|x| s[*x].name.as_ref().unwrap().to_owned())
+                .map(|x| s[*x].data.name.as_ref().unwrap().to_owned())
                 .collect::<Vec<_>>()
         }
 
         if missing.is_empty() {
             return (0, 0);
         }
-
 
         let log = false; // missing.contains(&"Dasypus.novemcinctus".to_string());
         if log {
@@ -51,7 +49,7 @@ fn effective_losses(
             .iter()
             .map(|x| {
                 species
-                    .find_leaf(|l: &Node| l.name.as_ref().unwrap().as_str() == x.as_str())
+                    .find_leaf(|l| l.name.as_ref().unwrap().as_str() == x.as_str())
                     .unwrap()
             })
             .collect::<Vec<_>>();
@@ -86,7 +84,7 @@ fn effective_losses(
                 }
             }
 
-            if log{
+            if log {
                 eprintln!(
                     "Loss |{}|: {:?}",
                     current.len(),
@@ -108,12 +106,11 @@ fn effective_losses(
     (lr_all + rr_all, lr_large + rr_large)
 }
 
-fn annotate_duplications(t: &mut Tree, species_tree: &Tree, filter_species: bool) {
+fn annotate_duplications(t: &mut NewickTree, species_tree: &NewickTree, filter_species: bool) {
     let restricted_species = if filter_species {
         let present_species = t
             .leaf_names()
-            .iter()
-            .map(|(_, n)| n.unwrap().split('#').nth(1).unwrap().to_owned())
+            .map(|n| n.split('#').nth(1).unwrap().to_owned())
             .map(|name| {
                 species_tree
                     .find_leaf(|n| n.name.as_ref().unwrap().as_str() == name.as_str())
@@ -125,14 +122,15 @@ fn annotate_duplications(t: &mut Tree, species_tree: &Tree, filter_species: bool
         None
     };
     t.inners().collect::<Vec<_>>().iter().for_each(|n| {
-        let children = t[*n].children.as_ref().unwrap();
-        let species: Vec<HashSet<_>> = children
+        let species: Vec<HashSet<_>> = t[*n]
+            .children()
             .iter()
             .map(|&c| {
                 t.leaves_of(c)
                     .iter()
                     .map(|&n| {
-                        t[n].name
+                        t[n].data
+                            .name
                             .as_ref()
                             .unwrap()
                             .split('#')
@@ -153,12 +151,18 @@ fn annotate_duplications(t: &mut Tree, species_tree: &Tree, filter_species: bool
                     species_tree,
                     restricted_species.as_ref().unwrap(),
                 );
-                t[*n].data.insert("D".to_string(), "Y".to_owned());
-                t[*n].data.insert("DCS".to_string(), dcs.to_string());
-                t[*n].data.insert("ELC".to_string(), elc_all.to_string());
-                t[*n].data.insert("ELLC".to_string(), elc_large.to_string());
+                t[*n].data.attrs.insert("D".to_string(), "Y".to_owned());
+                t[*n].data.attrs.insert("DCS".to_string(), dcs.to_string());
+                t[*n]
+                    .data
+                    .attrs
+                    .insert("ELC".to_string(), elc_all.to_string());
+                t[*n]
+                    .data
+                    .attrs
+                    .insert("ELLC".to_string(), elc_large.to_string());
             } else {
-                t[*n].data.insert("D".to_string(), "N".to_owned());
+                t[*n].data.attrs.insert("D".to_string(), "N".to_owned());
             }
         }
     });
@@ -189,10 +193,10 @@ fn main() -> Result<()> {
         ("annotate", _) => {
             let mut out = String::new();
             let species_tree =
-                Tree::from_filename(&value_t!(args, "species-tree", String).unwrap()).unwrap();
-            let mut t = Tree::from_string(&std::fs::read_to_string(&filename)?)?;
+                newick::from_filename(&value_t!(args, "species-tree", String).unwrap()).unwrap();
+            let mut t = newick::from_string(&std::fs::read_to_string(&filename)?)?;
             annotate_duplications(&mut t, &species_tree, true);
-            out.push_str(&t.to_string());
+            out.push_str(&t.to_newick());
             out.push('\n');
 
             File::create(&filename)?
