@@ -1,11 +1,13 @@
 use clap::*;
 use newick::*;
+use std::collections::HashMap;
 use std::collections::HashSet;
 use std::fs::File;
 use std::hash::Hash;
 use std::io::prelude::*;
+use std::io::BufReader;
 
-use anyhow::{Context, Result};
+use anyhow::{anyhow, bail, Context, Result};
 
 fn jaccard<T>(a: &HashSet<T>, b: &HashSet<T>) -> f32
 where
@@ -108,16 +110,16 @@ fn effective_losses(
 
 fn annotate_duplications(t: &mut NewickTree, species_tree: &NewickTree, filter_species: bool) {
     let restricted_species = if filter_species {
-        let present_species = t
-            .leaf_names()
-            .map(|n| n.split('#').nth(1).unwrap().to_owned())
-            .map(|name| {
-                species_tree
-                    .find_leaf(|n| n.name.as_ref().unwrap().as_str() == name.as_str())
-                    .unwrap()
-            })
-            .collect::<HashSet<_>>();
-        Some(present_species)
+        Some(
+            t.leaves()
+                .filter_map(|l| t[l].data.attrs.get("S").map(|s| s.to_owned()))
+                .map(|name| {
+                    species_tree
+                        .find_leaf(|n| n.name.as_ref().unwrap().as_str() == name.as_str())
+                        .unwrap()
+                })
+                .collect::<HashSet<_>>(),
+        )
     } else {
         None
     };
@@ -128,16 +130,7 @@ fn annotate_duplications(t: &mut NewickTree, species_tree: &NewickTree, filter_s
             .map(|&c| {
                 t.leaves_of(c)
                     .iter()
-                    .map(|&n| {
-                        t[n].data
-                            .name
-                            .as_ref()
-                            .unwrap()
-                            .split('#')
-                            .nth(1)
-                            .unwrap()
-                            .to_owned()
-                    })
+                    .map(|&n| t[n].data.attrs.get("S").map(|s| s.to_owned()).unwrap())
                     .collect()
             })
             .collect();
