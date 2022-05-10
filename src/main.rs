@@ -116,7 +116,7 @@ fn annotate_duplications(t: &mut NewickTree, species_tree: &NewickTree, filter_s
                 .map(|name| {
                     species_tree
                         .find_leaf(|n| n.name.as_ref().unwrap().as_str() == name.as_str())
-                        .unwrap()
+                        .expect(&format!("{} not found in species tree", name))
                 })
                 .collect::<HashSet<_>>(),
         )
