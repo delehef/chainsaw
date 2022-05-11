@@ -1,5 +1,6 @@
 use clap::*;
 use newick::*;
+use rusqlite::*;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::fs::File;
@@ -161,6 +162,73 @@ fn annotate_duplications(t: &mut NewickTree, species_tree: &NewickTree, filter_s
     });
 }
 
+fn geneize(t: &mut NewickTree, db_filename: &str) -> Result<()> {
+    fn get_gene(
+        db: &mut Connection,
+        protein: &str,
+    ) -> std::result::Result<String, rusqlite::Error> {
+        db.query_row(
+            "SELECT gene FROM genomes WHERE protein=?",
+            &[&protein],
+            |r| {
+                let gene: String = r.get("gene").unwrap();
+
+                Ok(gene.to_owned())
+            },
+        )
+    }
+    let mut db = Connection::open_with_flags(db_filename, OpenFlags::SQLITE_OPEN_READ_ONLY)?;
+
+    t.map_leaves(&mut |n| {
+        if n.data.name.is_some() {
+            n.data.name = Some(get_gene(&mut db, n.data.name.as_ref().unwrap()).unwrap())
+        }
+    });
+
+    Ok(())
+}
+
+fn taxonize(t: &mut NewickTree, map_file: &str) -> Result<()> {
+    let map = BufReader::new(File::open(map_file)?)
+        .lines()
+        .filter_map(|l| {
+            l.ok().and_then(|l| {
+                let mut s = l.split('\t');
+                let src = s.next()?.to_owned().parse::<usize>().ok()?;
+                let tgt = s.next()?.replace(' ', ".").to_owned();
+                Some((src, tgt))
+            })
+        })
+        .collect::<HashMap<usize, String>>();
+
+    for l in t.nodes_mut() {
+        let taxon_id = l.data.attrs.get("T").and_then(|s| s.parse::<usize>().ok());
+        // .map_err(|e| {
+        //     println!("#children: {}", l.children().len());
+        //     e
+        // });
+        // .context(format!("while parsing taxon {:?}", &l.data.name))?;
+        if let Some(taxon_id) = taxon_id {
+            if let Some(species) = map.get(&taxon_id) {
+                l.data.attrs.insert("S".to_string(), species.to_owned());
+            } else {
+                eprintln!("`{}` has no match in the reference file", taxon_id);
+            }
+        } else {
+            eprintln!("Node `{:?}` has no taxon specified", l.data.name);
+        }
+    }
+    Ok(())
+}
+
+fn compress(t: &mut NewickTree) -> Result<()> {
+    while t[t.root()].children().len() == 1 {
+        println!("Compressing");
+        t.set_root(t[t.root()].children()[0]);
+    }
+    Ok(())
+}
+
 fn main() -> Result<()> {
     let args = App::new("Chainsaw")
         .version(clap::crate_version!())
@@ -170,31 +238,124 @@ fn main() -> Result<()> {
                 .help("Sets the input file to use")
                 .required(true),
         )
-        .arg(
-            Arg::with_name("species-tree")
-                .short("S")
-                .long("species-tree")
-                .help("The species tree to plot against")
-                .takes_value(true),
+        .subcommand(
+            SubCommand::with_name("annotate").arg(
+                Arg::with_name("species-tree")
+                    .short("S")
+                    .long("species-tree")
+                    .help("The species tree to use")
+                    .required(true)
+                    .takes_value(true),
+            ),
         )
-        .subcommand(SubCommand::with_name("annotate"))
+        .subcommand(
+            SubCommand::with_name("taxonize")
+                .arg(Arg::with_name("mapping").short("m").takes_value(true)),
+        )
+        .subcommand(
+            SubCommand::with_name("geneize").arg(
+                Arg::with_name("database")
+                    .short("D")
+                    .long("database")
+                    .help("The database to use")
+                    .required(true)
+                    .takes_value(true),
+            ),
+        )
+        .subcommand(SubCommand::with_name("compress"))
         .get_matches();
     let filename = value_t!(args, "FILE", String).unwrap();
     println!("Processing {}", filename);
+    let mut trees: Vec<NewickTree> =
+        newick::from_filename(&filename).with_context(|| format!("failed to parse {}", filename))?;
 
     match args.subcommand() {
-        ("annotate", _) => {
+        ("annotate", Some(margs)) => {
             let mut out = String::new();
             let species_tree =
-                newick::from_filename(&value_t!(args, "species-tree", String).unwrap()).unwrap();
-            let mut t = newick::from_string(&std::fs::read_to_string(&filename)?)?;
-            annotate_duplications(&mut t, &species_tree, true);
-            out.push_str(&t.to_newick());
-            out.push('\n');
+                newick::one_from_filename(&value_t!(margs, "species-tree", String).unwrap())
+                    .unwrap();
+            println!("Processing {} trees", trees.len());
+            for t in trees.iter_mut() {
+                annotate_duplications(t, &species_tree, true);
+                out.push_str(&Newick::to_newick(t));
+                out.push('\n');
+            }
 
-            File::create(&filename)?
+            // File::create(&filename)?
+            File::create("out.nhx")?
                 .write_all(out.as_bytes())
                 .context(format!("Cannot write to `{}`", filename))
+        }
+        ("compress", Some(margs)) => {
+            let mut out = String::new();
+            for t in trees.iter_mut() {
+                compress(t).and_then(|_| {
+                    out.push_str(&Newick::to_newick(t).replace('\n', ""));
+                    out.push('\n');
+                    Ok(())
+                })?;
+            }
+            File::create("out.nhx")?
+                .write_all(out.as_bytes())
+                .context(format!("Cannot write to `out.nhx`"))
+        }
+        ("taxonize", Some(margs)) => {
+            let mut out = String::new();
+            let mut err = String::new();
+            let map_file = value_t!(margs, "mapping", String).unwrap();
+
+            for t in trees.iter_mut() {
+                taxonize(t, &map_file)
+                    .and_then(|_| {
+                        out.push_str(&Newick::to_newick(t).replace('\n', ""));
+                        out.push('\n');
+                        Ok(())
+                    })
+                    .or_else::<(), _>(|_| {
+                        err.push_str(&Newick::to_newick(t));
+                        err.push('\n');
+                        Ok(())
+                    });
+            }
+
+            File::create("out.nhx")?
+                .write_all(out.as_bytes())
+                .context(format!("Cannot write to `out.nhx`"))?;
+            if !err.is_empty() {
+                File::create("err.nhx")?
+                    .write_all(err.as_bytes())
+                    .context(format!("Cannot write to `err.nhx`"))?
+            }
+            Ok(())
+        }
+        ("geneize", Some(margs)) => {
+            let mut out = String::new();
+            let mut err = String::new();
+            let db_filename = margs.value_of("database").unwrap();
+
+            for t in trees.iter_mut() {
+                geneize(t, &db_filename)
+                    .and_then(|_| {
+                        out.push_str(&Newick::to_newick(t).replace('\n', ""));
+                        out.push('\n');
+                        Ok(())
+                    })
+                    .or_else::<(), _>(|_| {
+                        err.push_str(&Newick::to_newick(t).replace('\n', ""));
+                        err.push('\n');
+                        Ok(())
+                    });
+            }
+            File::create("out.nhx")?
+                .write_all(out.as_bytes())
+                .context(format!("Cannot write to `out.nhx`"))?;
+            if !err.is_empty() {
+                File::create("err.nhx")?
+                    .write_all(err.as_bytes())
+                    .context(format!("Cannot write to `err.nhx`"))?
+            }
+            Ok(())
         }
         _ => unimplemented!(),
     }

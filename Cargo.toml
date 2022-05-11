@@ -9,3 +9,4 @@ edition = "2018"
 anyhow = "1"
 newick = { path = "../newick" }
 clap = "2"
+rusqlite = "0.25"
