@@ -10,6 +10,9 @@ use std::io::BufReader;
 
 use anyhow::{anyhow, bail, Context, Result};
 
+mod genebook;
+use genebook::GeneBook;
+
 fn jaccard<T>(a: &HashSet<T>, b: &HashSet<T>) -> f32
 where
     T: Eq + Hash,
@@ -162,7 +165,7 @@ fn annotate_duplications(t: &mut NewickTree, species_tree: &NewickTree, filter_s
     });
 }
 
-fn geneize(t: &mut NewickTree, db_filename: &str) -> Result<()> {
+fn geneize(t: &mut NewickTree, book: &mut GeneBook) -> Result<()> {
     fn get_gene(
         db: &mut Connection,
         protein: &str,
@@ -177,11 +180,10 @@ fn geneize(t: &mut NewickTree, db_filename: &str) -> Result<()> {
             },
         )
     }
-    let mut db = Connection::open_with_flags(db_filename, OpenFlags::SQLITE_OPEN_READ_ONLY)?;
 
     t.map_leaves(&mut |n| {
         if n.data.name.is_some() {
-            n.data.name = Some(get_gene(&mut db, n.data.name.as_ref().unwrap()).unwrap())
+            n.data.name = Some(book.get(n.data.name.as_ref().unwrap()).unwrap().name)
         }
     });
 
@@ -253,21 +255,28 @@ fn main() -> Result<()> {
                 .arg(Arg::with_name("mapping").short("m").takes_value(true)),
         )
         .subcommand(
-            SubCommand::with_name("geneize").arg(
-                Arg::with_name("database")
-                    .short("D")
-                    .long("database")
-                    .help("The database to use")
-                    .required(true)
-                    .takes_value(true),
-            ),
+            SubCommand::with_name("geneize")
+                .arg(
+                    Arg::with_name("database")
+                        .short("D")
+                        .long("database")
+                        .help("The database to use")
+                        .required(true)
+                        .takes_value(true),
+                )
+                .arg(
+                    Arg::with_name("cache-db")
+                        .short("c")
+                        .long("cache-db")
+                        .help("Read the whole database at once")
+                ),
         )
         .subcommand(SubCommand::with_name("compress"))
         .get_matches();
     let filename = value_t!(args, "FILE", String).unwrap();
     println!("Processing {}", filename);
-    let mut trees: Vec<NewickTree> =
-        newick::from_filename(&filename).with_context(|| format!("failed to parse {}", filename))?;
+    let mut trees: Vec<NewickTree> = newick::from_filename(&filename)
+        .with_context(|| format!("failed to parse {}", filename))?;
 
     match args.subcommand() {
         ("annotate", Some(margs)) => {
@@ -333,9 +342,14 @@ fn main() -> Result<()> {
             let mut out = String::new();
             let mut err = String::new();
             let db_filename = margs.value_of("database").unwrap();
+            let mut book = if margs.is_present("cache-db") {
+                GeneBook::cached(db_filename)
+            } else {
+                GeneBook::inline(db_filename)
+            }?;
 
             for t in trees.iter_mut() {
-                geneize(t, &db_filename)
+                geneize(t, &mut book)
                     .and_then(|_| {
                         out.push_str(&Newick::to_newick(t).replace('\n', ""));
                         out.push('\n');
