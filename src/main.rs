@@ -21,16 +21,16 @@ where
 }
 
 fn effective_losses(
-    a: &HashSet<String>,
-    b: &HashSet<String>,
+    a: &HashSet<usize>,
+    b: &HashSet<usize>,
     species: &NewickTree,
     actual_species: &HashSet<usize>,
 ) -> (usize, usize) {
-    let missing_left = a.difference(b).collect::<HashSet<_>>();
-    let missing_right = b.difference(a).collect::<HashSet<_>>();
+    let missing_left = a.difference(b).copied().collect::<HashSet<_>>();
+    let missing_right = b.difference(a).copied().collect::<HashSet<_>>();
 
     fn els_oneside(
-        missing: &HashSet<&String>,
+        missing: &HashSet<usize>,
         species: &NewickTree,
         actual_species: &HashSet<usize>,
     ) -> (usize, usize) {
@@ -51,14 +51,7 @@ fn effective_losses(
 
         let mut r_large = 0;
         let mut r_all = 0;
-        let mut missing = missing
-            .iter()
-            .map(|x| {
-                species
-                    .find_leaf(|l| l.name.as_ref().unwrap().as_str() == x.as_str())
-                    .unwrap()
-            })
-            .collect::<Vec<_>>();
+        let mut missing = missing.into_iter().copied().collect::<Vec<_>>();
 
         while !missing.is_empty() {
             let mut mrca = missing[0];
@@ -128,18 +121,38 @@ fn annotate_duplications(t: &mut NewickTree, species_tree: &NewickTree, filter_s
         None
     };
     t.inners().collect::<Vec<_>>().iter().for_each(|n| {
-        let species: Vec<HashSet<_>> = t[*n]
+        let species: Vec<HashSet<usize>> = t[*n]
             .children()
             .iter()
             .map(|&c| {
                 t.leaves_of(c)
                     .iter()
                     .map(|&n| t[n].data.attrs.get("S").map(|s| s.to_owned()).unwrap())
+                    .map(|s| {
+                        species_tree
+                            .find_leaf(|l| l.name.as_ref().unwrap().as_str() == s.as_str())
+                            .unwrap()
+                    })
                     .collect()
             })
             .collect();
-        if species.len() == 2 {
-            let d = species.iter().skip(1).any(|x| !x.is_disjoint(&species[0]));
+        if species.len() >= 2 {
+            let mrcas = species
+                .iter()
+                .map(|ss| species_tree.mrca(ss).unwrap())
+                .collect::<Vec<_>>();
+            let mut d = false;
+            'find_d: for (i, &m1) in mrcas.iter().enumerate() {
+                for &m2 in mrcas.iter().skip(i + 1) {
+                    if species_tree.ascendance(m1).contains(&m2)
+                        || species_tree.ascendance(m2).contains(&m1)
+                    {
+                        d = true;
+                        break 'find_d;
+                    }
+                }
+            }
+
             if d {
                 let dcs = jaccard(&species[0], &species[1]);
                 let (elc_all, elc_large) = effective_losses(
@@ -268,7 +281,7 @@ fn main() -> Result<()> {
                     Arg::with_name("cache-db")
                         .short("c")
                         .long("cache-db")
-                        .help("Read the whole database at once")
+                        .help("Read the whole database at once"),
                 ),
         )
         .subcommand(SubCommand::with_name("compress"))
@@ -291,8 +304,7 @@ fn main() -> Result<()> {
                 out.push('\n');
             }
 
-            // File::create(&filename)?
-            File::create("out.nhx")?
+            File::create(&filename)?
                 .write_all(out.as_bytes())
                 .context(format!("Cannot write to `{}`", filename))
         }
