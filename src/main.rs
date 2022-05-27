@@ -253,6 +253,12 @@ fn main() -> Result<()> {
                 .help("Sets the input file to use")
                 .required(true),
         )
+        .arg(
+            Arg::with_name("outfile")
+                .takes_value(true)
+                .short("o")
+                .long("out"),
+        )
         .subcommand(
             SubCommand::with_name("annotate").arg(
                 Arg::with_name("species-tree")
@@ -317,7 +323,7 @@ fn main() -> Result<()> {
                     Ok(())
                 })?;
             }
-            File::create("out.nhx")?
+            File::create(value_t!(args, "outfile", String).unwrap_or(filename))?
                 .write_all(out.as_bytes())
                 .context(format!("Cannot write to `out.nhx`"))
         }
@@ -340,9 +346,9 @@ fn main() -> Result<()> {
                     });
             }
 
-            File::create("out.nhx")?
+            File::create(value_t!(args, "outfile", String).unwrap_or(filename))?
                 .write_all(out.as_bytes())
-                .context(format!("Cannot write to `out.nhx`"))?;
+                .context(format!("Cannot write to output file"))?;
             if !err.is_empty() {
                 File::create("err.nhx")?
                     .write_all(err.as_bytes())
@@ -373,9 +379,9 @@ fn main() -> Result<()> {
                         Ok(())
                     });
             }
-            File::create("out.nhx")?
+            File::create(value_t!(args, "outfile", String).unwrap_or(filename))?
                 .write_all(out.as_bytes())
-                .context(format!("Cannot write to `out.nhx`"))?;
+                .context(format!("Cannot write to out file"))?;
             if !err.is_empty() {
                 File::create("err.nhx")?
                     .write_all(err.as_bytes())
