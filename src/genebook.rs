@@ -5,7 +5,8 @@ use std::sync::Mutex;
 
 #[derive(Clone, Default)]
 pub struct Gene {
-    pub name: String,
+    pub gene: String,
+    pub species: String,
 }
 
 pub enum GeneBook {
@@ -19,16 +20,28 @@ impl GeneBook {
 
         let conn = Connection::open(filename)
             .with_context(|| format!("while connecting to {}", filename))?;
-        let mut query = conn.prepare("SELECT gene, protein FROM genomes")?;
+        let mut query = conn.prepare("SELECT gene, protein, species FROM genomes")?;
         let genes = query
             .query_map([], |r| {
-                std::result::Result::Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?))
+                std::result::Result::Ok((
+                    r.get::<_, String>(0)?,
+                    r.get::<_, String>(1)?,
+                    r.get::<_, String>(2)?,
+                ))
             })?
             .collect::<Result<Vec<_>, _>>()?;
 
         let r = genes
             .into_iter()
-            .map(|g| (g.1.clone(), Gene { name: g.0 }))
+            .map(|g| {
+                (
+                    g.1.clone(),
+                    Gene {
+                        gene: g.0,
+                        species: g.2,
+                    },
+                )
+            })
             .collect();
         println!("Done.");
         Ok(GeneBook::Cached(r))
@@ -48,11 +61,12 @@ impl GeneBook {
                 .ok_or(anyhow::anyhow!("key not found")),
             GeneBook::Inline(conn_mutex) => {
                 let conn = conn_mutex.lock().expect("MUTEX POISONING");
-                let mut query = conn.prepare("SELECT gene FROM genomes WHERE protein=?")?;
+                let mut query = conn.prepare("SELECT gene, species FROM genomes WHERE protein=?")?;
                 query
                     .query_row(&[g], |r| {
                         rusqlite::Result::Ok(Gene {
-                            name: r.get::<_, String>(0)?,
+                            gene: r.get::<_, String>(0)?,
+                            species: r.get::<_, String>(1)?,
                         })
                     })
                     .with_context(|| "while accessing DB")

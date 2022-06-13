@@ -179,24 +179,28 @@ fn annotate_duplications(t: &mut NewickTree, species_tree: &NewickTree, filter_s
 }
 
 fn geneize(t: &mut NewickTree, book: &mut GeneBook) -> Result<()> {
-    fn get_gene(
-        db: &mut Connection,
-        protein: &str,
-    ) -> std::result::Result<String, rusqlite::Error> {
-        db.query_row(
-            "SELECT gene FROM genomes WHERE protein=?",
-            &[&protein],
-            |r| {
-                let gene: String = r.get("gene").unwrap();
-
-                Ok(gene.to_owned())
-            },
-        )
-    }
-
     t.map_leaves(&mut |n| {
         if n.data.name.is_some() {
-            n.data.name = Some(book.get(n.data.name.as_ref().unwrap()).expect(&format!("Cannot find {:?}", n.data.name)).name)
+            n.data.name = Some(
+                book.get(n.data.name.as_ref().unwrap())
+                    .expect(&format!("Cannot find {:?}", n.data.name))
+                    .gene,
+            )
+        }
+    });
+
+    Ok(())
+}
+
+fn speciesize(t: &mut NewickTree, book: &mut GeneBook) -> Result<()> {
+    t.map_leaves(&mut |n| {
+        if n.data.name.is_some() {
+            n.data.attrs.insert(
+                "S".to_owned(),
+                book.get(n.data.name.as_ref().unwrap())
+                    .expect(&format!("Cannot find {:?}", n.data.name))
+                    .species,
+            );
         }
     });
 
@@ -270,8 +274,30 @@ fn main() -> Result<()> {
             ),
         )
         .subcommand(
+            SubCommand::with_name("speciesize")
+                .arg(
+                    Arg::with_name("database")
+                        .short("D")
+                        .long("database")
+                        .help("The database to use")
+                        .required(true)
+                        .takes_value(true),
+                )
+                .arg(
+                    Arg::with_name("cache-db")
+                        .short("c")
+                        .long("cache-db")
+                        .help("Read the whole database at once"),
+                ),
+        )
+        .subcommand(
             SubCommand::with_name("taxonize")
-                .arg(Arg::with_name("mapping").short("m").takes_value(true).required(true)),
+                .arg(
+                    Arg::with_name("mapping")
+                        .short("m")
+                        .takes_value(true)
+                        .required(true),
+                )
         )
         .subcommand(
             SubCommand::with_name("geneize")
@@ -293,7 +319,7 @@ fn main() -> Result<()> {
         .subcommand(SubCommand::with_name("compress"))
         .get_matches();
     let filename = value_t!(args, "FILE", String).unwrap();
-    println!("Processing {}", filename);
+    println!("Parsing {}", filename);
     let mut trees: Vec<NewickTree> = newick::from_filename(&filename)
         .with_context(|| format!("failed to parse {}", filename))?;
 
@@ -306,7 +332,7 @@ fn main() -> Result<()> {
             println!("Processing {} trees", trees.len());
             for t in trees.iter_mut() {
                 annotate_duplications(t, &species_tree, true);
-                annotate_mrcas(t, &species_tree)?;
+                // annotate_mrcas(t, &species_tree)?;
                 out.push_str(&Newick::to_newick(t));
                 out.push('\n');
             }
@@ -327,6 +353,31 @@ fn main() -> Result<()> {
             File::create(value_t!(args, "outfile", String).unwrap_or(filename))?
                 .write_all(out.as_bytes())
                 .context(format!("Cannot write to `out.nhx`"))
+        }
+        ("speciesize", Some(margs)) => {
+            let mut out = String::new();
+            let mut err = String::new();
+            let db_filename = margs.value_of("database").unwrap();
+            let mut book = if margs.is_present("cache-db") {
+                GeneBook::cached(db_filename)
+            } else {
+                GeneBook::inline(db_filename)
+            }?;
+
+            for t in trees.iter_mut() {
+                speciesize(t, &mut book)
+                    .and_then(|_| {
+                        out.push_str(&Newick::to_newick(t).replace('\n', ""));
+                        out.push('\n');
+                        Ok(())
+                    })
+                    .or_else::<(), _>(|_| {
+                        err.push_str(&Newick::to_newick(t));
+                        err.push('\n');
+                        Ok(())
+                    });
+            }
+            Ok(())
         }
         ("taxonize", Some(margs)) => {
             let mut out = String::new();
