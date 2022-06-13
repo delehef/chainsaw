@@ -271,7 +271,7 @@ fn main() -> Result<()> {
         )
         .subcommand(
             SubCommand::with_name("taxonize")
-                .arg(Arg::with_name("mapping").short("m").takes_value(true)),
+                .arg(Arg::with_name("mapping").short("m").takes_value(true).required(true)),
         )
         .subcommand(
             SubCommand::with_name("geneize")
@@ -300,12 +300,13 @@ fn main() -> Result<()> {
     match args.subcommand() {
         ("annotate", Some(margs)) => {
             let mut out = String::new();
-            let species_tree =
-                newick::one_from_filename(&value_t!(margs, "species-tree", String).unwrap())
-                    .unwrap();
+            let species_tree_file = value_t!(margs, "species-tree", String).unwrap();
+            let species_tree = newick::one_from_filename(&species_tree_file)
+                .context(format!("while parsing {}", species_tree_file))?;
             println!("Processing {} trees", trees.len());
             for t in trees.iter_mut() {
                 annotate_duplications(t, &species_tree, true);
+                annotate_mrcas(t, &species_tree)?;
                 out.push_str(&Newick::to_newick(t));
                 out.push('\n');
             }
