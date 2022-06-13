@@ -196,7 +196,7 @@ fn geneize(t: &mut NewickTree, book: &mut GeneBook) -> Result<()> {
 
     t.map_leaves(&mut |n| {
         if n.data.name.is_some() {
-            n.data.name = Some(book.get(n.data.name.as_ref().unwrap()).unwrap().name)
+            n.data.name = Some(book.get(n.data.name.as_ref().unwrap()).expect(&format!("Cannot find {:?}", n.data.name)).name)
         }
     });
 
