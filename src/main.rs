@@ -178,6 +178,31 @@ fn annotate_duplications(t: &mut NewickTree, species_tree: &NewickTree, filter_s
     });
 }
 
+fn annotate_mrcas(
+    t: &mut NewickTree,
+    species_tree: &NewickTree,
+) -> Result<()> {
+    for n in t.inners().collect::<Vec<_>>().into_iter() {
+        let species: HashSet<usize> = t
+            .leaves_of(n)
+            .iter()
+            .flat_map(|&c| {
+                t.leaves_of(c)
+                    .into_iter()
+                    .map(|n| t[n].data.attrs.get("S").map(|s| s.to_owned()).unwrap())
+                    .map(|s| {
+                        species_tree
+                            .find_leaf(|l| l.name.as_ref().unwrap().as_str() == s.as_str())
+                            .ok_or(anyhow!(format!("{} not found in species tree", s)))
+                    })
+            })
+            .collect::<Result<HashSet<_>>>()?;
+        let mrca = species_tree.mrca(&species).unwrap();
+        t[n].data.attrs.insert("S".to_owned(), species_tree[mrca].data.name.as_ref().unwrap().to_owned());
+    }
+    Ok(())
+}
+
 fn geneize(t: &mut NewickTree, book: &mut GeneBook) -> Result<()> {
     t.map_leaves(&mut |n| {
         if n.data.name.is_some() {
@@ -291,13 +316,12 @@ fn main() -> Result<()> {
                 ),
         )
         .subcommand(
-            SubCommand::with_name("taxonize")
-                .arg(
-                    Arg::with_name("mapping")
-                        .short("m")
-                        .takes_value(true)
-                        .required(true),
-                )
+            SubCommand::with_name("taxonize").arg(
+                Arg::with_name("mapping")
+                    .short("m")
+                    .takes_value(true)
+                    .required(true),
+            ),
         )
         .subcommand(
             SubCommand::with_name("geneize")
@@ -332,7 +356,7 @@ fn main() -> Result<()> {
             println!("Processing {} trees", trees.len());
             for t in trees.iter_mut() {
                 annotate_duplications(t, &species_tree, true);
-                // annotate_mrcas(t, &species_tree)?;
+                annotate_mrcas(t, &species_tree)?;
                 out.push_str(&Newick::to_newick(t));
                 out.push('\n');
             }
@@ -376,6 +400,15 @@ fn main() -> Result<()> {
                         err.push('\n');
                         Ok(())
                     });
+            }
+
+            File::create(value_t!(args, "outfile", String).unwrap_or(filename))?
+                .write_all(out.as_bytes())
+                .context(format!("Cannot write to output file"))?;
+            if !err.is_empty() {
+                File::create("err.nhx")?
+                    .write_all(err.as_bytes())
+                    .context(format!("Cannot write to `err.nhx`"))?
             }
             Ok(())
         }
