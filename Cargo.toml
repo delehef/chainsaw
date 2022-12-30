@@ -7,6 +7,12 @@ edition = "2018"
 
 [dependencies]
 anyhow = "1"
-newick = { path = "../newick" }
 clap = "2"
-rusqlite = "0.25"
+newick = "0.5"
+rusqlite = "0.26"
+
+[package.metadata.release]
+tag-prefix = ""
+publish = false
+pre-release-hook = ["git-cliff", "-o", "CHANGELOG.md", "--tag", "{{version}}"]
+allow-branch = ["master"]
