@@ -30,14 +30,14 @@ enum Command {
     /// add duplications & ancestral nodes anntations to a tree
     Annotate {
         /// the species tree to use
-        #[clap(value_parser, short = 'S')]
+        #[clap(value_parser, short = 'S', long = "species-tree")]
         species_tree: String,
     },
 
     /// annotate leaves in a tree with their species
     Speciesize {
         /// the database containing the id/species mapping
-        #[clap(value_parser, short = 'D')]
+        #[clap(value_parser, short = 'D', long = "database")]
         database: String,
 
         /// if set, cache the database in memory
@@ -56,7 +56,7 @@ enum Command {
     /// convert ids from proteins to genes
     Convert {
         /// the database containing the proteins/genes mapping
-        #[clap(value_parser, short = 'D')]
+        #[clap(value_parser, short = 'D', long = "database")]
         database: String,
 
         /// if set, cache the database in memory
