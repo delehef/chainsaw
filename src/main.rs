@@ -45,8 +45,8 @@ enum Command {
         cache_db: bool,
 
         /// the database column corresponding to leaf IDs in the tree
-        #[clap(value_parser, default_value_t = String::from("protein"))]
-        ids: String,
+        #[clap(value_parser, default_value_t = String::from("protein"), long = "id")]
+        id: String,
 
         /// the database column containing the species
         #[clap(value_parser, default_value_t = String::from("species"))]
@@ -121,7 +121,7 @@ fn main() -> Result<()> {
         Command::Speciesize {
             database,
             cache_db,
-            ids,
+            id: ids,
             species,
         } => {
             let mut out = String::new();
