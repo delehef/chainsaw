@@ -178,10 +178,7 @@ fn annotate_duplications(t: &mut NewickTree, species_tree: &NewickTree, filter_s
     });
 }
 
-fn annotate_mrcas(
-    t: &mut NewickTree,
-    species_tree: &NewickTree,
-) -> Result<()> {
+fn annotate_mrcas(t: &mut NewickTree, species_tree: &NewickTree) -> Result<()> {
     for n in t.inners().collect::<Vec<_>>().into_iter() {
         let species: HashSet<usize> = t
             .leaves_of(n)
@@ -198,7 +195,10 @@ fn annotate_mrcas(
             })
             .collect::<Result<HashSet<_>>>()?;
         let mrca = species_tree.mrca(&species).unwrap();
-        t[n].data.attrs.insert("S".to_owned(), species_tree[mrca].data.name.as_ref().unwrap().to_owned());
+        t[n].data.attrs.insert(
+            "S".to_owned(),
+            species_tree[mrca].data.name.as_ref().unwrap().to_owned(),
+        );
     }
     Ok(())
 }
@@ -380,7 +380,6 @@ fn main() -> Result<()> {
         }
         ("speciesize", Some(margs)) => {
             let mut out = String::new();
-            let mut err = String::new();
             let db_filename = margs.value_of("database").unwrap();
             let mut book = if margs.is_present("cache-db") {
                 GeneBook::cached(db_filename)
@@ -389,61 +388,37 @@ fn main() -> Result<()> {
             }?;
 
             for t in trees.iter_mut() {
-                speciesize(t, &mut book)
-                    .and_then(|_| {
-                        out.push_str(&Newick::to_newick(t).replace('\n', ""));
-                        out.push('\n');
-                        Ok(())
-                    })
-                    .or_else::<(), _>(|_| {
-                        err.push_str(&Newick::to_newick(t));
-                        err.push('\n');
-                        Ok(())
-                    });
+                speciesize(t, &mut book).and_then(|_| {
+                    out.push_str(&Newick::to_newick(t).replace('\n', ""));
+                    out.push('\n');
+                    Ok(())
+                })?
             }
 
             File::create(value_t!(args, "outfile", String).unwrap_or(filename))?
                 .write_all(out.as_bytes())
                 .context(format!("Cannot write to output file"))?;
-            if !err.is_empty() {
-                File::create("err.nhx")?
-                    .write_all(err.as_bytes())
-                    .context(format!("Cannot write to `err.nhx`"))?
-            }
             Ok(())
         }
         ("taxonize", Some(margs)) => {
             let mut out = String::new();
-            let mut err = String::new();
             let map_file = value_t!(margs, "mapping", String).unwrap();
 
             for t in trees.iter_mut() {
-                taxonize(t, &map_file)
-                    .and_then(|_| {
-                        out.push_str(&Newick::to_newick(t).replace('\n', ""));
-                        out.push('\n');
-                        Ok(())
-                    })
-                    .or_else::<(), _>(|_| {
-                        err.push_str(&Newick::to_newick(t));
-                        err.push('\n');
-                        Ok(())
-                    });
+                taxonize(t, &map_file).and_then(|_| {
+                    out.push_str(&Newick::to_newick(t).replace('\n', ""));
+                    out.push('\n');
+                    Ok(())
+                })?
             }
 
             File::create(value_t!(args, "outfile", String).unwrap_or(filename))?
                 .write_all(out.as_bytes())
                 .context(format!("Cannot write to output file"))?;
-            if !err.is_empty() {
-                File::create("err.nhx")?
-                    .write_all(err.as_bytes())
-                    .context(format!("Cannot write to `err.nhx`"))?
-            }
             Ok(())
         }
         ("geneize", Some(margs)) => {
             let mut out = String::new();
-            let mut err = String::new();
             let db_filename = margs.value_of("database").unwrap();
             let mut book = if margs.is_present("cache-db") {
                 GeneBook::cached(db_filename)
@@ -452,26 +427,15 @@ fn main() -> Result<()> {
             }?;
 
             for t in trees.iter_mut() {
-                geneize(t, &mut book)
-                    .and_then(|_| {
-                        out.push_str(&Newick::to_newick(t).replace('\n', ""));
-                        out.push('\n');
-                        Ok(())
-                    })
-                    .or_else::<(), _>(|_| {
-                        err.push_str(&Newick::to_newick(t).replace('\n', ""));
-                        err.push('\n');
-                        Ok(())
-                    });
+                geneize(t, &mut book).and_then(|_| {
+                    out.push_str(&Newick::to_newick(t).replace('\n', ""));
+                    out.push('\n');
+                    Ok(())
+                })?
             }
             File::create(value_t!(args, "outfile", String).unwrap_or(filename))?
                 .write_all(out.as_bytes())
                 .context(format!("Cannot write to out file"))?;
-            if !err.is_empty() {
-                File::create("err.nhx")?
-                    .write_all(err.as_bytes())
-                    .context(format!("Cannot write to `err.nhx`"))?
-            }
             Ok(())
         }
         _ => unimplemented!(),
