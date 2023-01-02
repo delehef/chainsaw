@@ -7,7 +7,7 @@ edition = "2018"
 
 [dependencies]
 anyhow = "1"
-clap = "2"
+clap = { version = "3", features = ["derive"] }
 newick = "0.5"
 rusqlite = "0.26"
 

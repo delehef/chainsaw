@@ -1,4 +1,4 @@
-use clap::*;
+use clap::{Parser, Subcommand};
 use newick::*;
 use std::collections::HashMap;
 use std::collections::HashSet;
@@ -272,86 +272,73 @@ fn compress(t: &mut NewickTree) -> Result<()> {
     Ok(())
 }
 
-fn main() -> Result<()> {
-    let args = App::new("Chainsaw")
-        .version(clap::crate_version!())
-        .author(clap::crate_authors!())
-        .arg(
-            Arg::with_name("FILE")
-                .help("Sets the input file to use")
-                .required(true),
-        )
-        .arg(
-            Arg::with_name("outfile")
-                .takes_value(true)
-                .short("o")
-                .long("out"),
-        )
-        .subcommand(
-            SubCommand::with_name("annotate").arg(
-                Arg::with_name("species-tree")
-                    .short("S")
-                    .long("species-tree")
-                    .help("The species tree to use")
-                    .required(true)
-                    .takes_value(true),
-            ),
-        )
-        .subcommand(
-            SubCommand::with_name("speciesize")
-                .arg(
-                    Arg::with_name("database")
-                        .short("D")
-                        .long("database")
-                        .help("The database to use")
-                        .required(true)
-                        .takes_value(true),
-                )
-                .arg(
-                    Arg::with_name("cache-db")
-                        .short("c")
-                        .long("cache-db")
-                        .help("Read the whole database at once"),
-                ),
-        )
-        .subcommand(
-            SubCommand::with_name("taxonize").arg(
-                Arg::with_name("mapping")
-                    .short("m")
-                    .takes_value(true)
-                    .required(true),
-            ),
-        )
-        .subcommand(
-            SubCommand::with_name("geneize")
-                .arg(
-                    Arg::with_name("database")
-                        .short("D")
-                        .long("database")
-                        .help("The database to use")
-                        .required(true)
-                        .takes_value(true),
-                )
-                .arg(
-                    Arg::with_name("cache-db")
-                        .short("c")
-                        .long("cache-db")
-                        .help("Read the whole database at once"),
-                ),
-        )
-        .subcommand(SubCommand::with_name("compress"))
-        .get_matches();
-    let filename = value_t!(args, "FILE", String).unwrap();
-    println!("Parsing {}", filename);
-    let mut trees: Vec<NewickTree> = newick::from_filename(&filename)
-        .with_context(|| format!("failed to parse {}", filename))?;
+#[derive(Parser)]
+#[clap(author, version, about, long_about = None)]
+struct Args {
+    /// sets the input file
+    #[clap(value_parser)]
+    infile: String,
 
-    match args.subcommand() {
-        ("annotate", Some(margs)) => {
+    /// output file name
+    #[clap(value_parser, short = 'o', long = "out")]
+    outfile: Option<String>,
+
+    #[clap(subcommand)]
+    command: Command,
+}
+
+#[derive(Subcommand)]
+enum Command {
+    /// add duplications & ancestral nodes anntations to a tree
+    Annotate {
+        /// the species tree to use
+        #[clap(value_parser, short = 'S')]
+        species_tree: String,
+    },
+
+    /// annotate leaves in a tree with their species
+    Speciesize {
+        /// the database containing the id/species mapping
+        #[clap(value_parser, short = 'D')]
+        database: String,
+
+        /// if set, cache the database in memory
+        #[clap(value_parser, short = 'c')]
+        cache_db: bool,
+    },
+
+    /// convert ids from proteins to genes
+    Geneize {
+        /// the database containing the proteins/genes mapping
+        #[clap(value_parser, short = 'D')]
+        database: String,
+
+        /// if set, cache the database in memory
+        #[clap(value_parser, short = 'c')]
+        cache_db: bool,
+    },
+
+    ///
+    Taxonize {
+        #[clap(value_parser)]
+        mapping: String,
+    },
+
+    /// compress root nodes with a single child
+    Compress,
+}
+
+fn main() -> Result<()> {
+    let args = Args::parse();
+    println!("Parsing {}", &args.infile);
+    let mut trees: Vec<NewickTree> = newick::from_filename(&args.infile)
+        .with_context(|| format!("failed to parse {}", &args.infile))?;
+
+    match args.command {
+        Command::Annotate { species_tree } => {
             let mut out = String::new();
-            let species_tree_file = value_t!(margs, "species-tree", String).unwrap();
-            let species_tree = newick::one_from_filename(&species_tree_file)
-                .context(format!("while parsing {}", species_tree_file))?;
+            let species_tree = newick::one_from_filename(&species_tree)
+                .context(format!("while parsing {}", &species_tree))?;
             println!("Processing {} trees", trees.len());
             for t in trees.iter_mut() {
                 annotate_duplications(t, &species_tree, true);
@@ -360,11 +347,11 @@ fn main() -> Result<()> {
                 out.push('\n');
             }
 
-            File::create(&filename)?
+            File::create(&args.infile)?
                 .write_all(out.as_bytes())
-                .context(format!("Cannot write to `{}`", filename))
+                .context(format!("Cannot write to `{}`", &args.infile))
         }
-        ("compress", Some(_margs)) => {
+        Command::Compress => {
             let mut out = String::new();
             for t in trees.iter_mut() {
                 compress(t).map(|_| {
@@ -372,17 +359,17 @@ fn main() -> Result<()> {
                     out.push('\n');
                 })?;
             }
-            File::create(value_t!(args, "outfile", String).unwrap_or(filename))?
+            let outfile = args.outfile.unwrap_or(args.infile);
+            File::create(&outfile)?
                 .write_all(out.as_bytes())
-                .with_context(|| anyhow!("Cannot write to `out.nhx`"))
+                .with_context(|| anyhow!("cannot write to `{}`", &outfile))
         }
-        ("speciesize", Some(margs)) => {
+        Command::Speciesize { database, cache_db } => {
             let mut out = String::new();
-            let db_filename = margs.value_of("database").unwrap();
-            let mut book = if margs.is_present("cache-db") {
-                GeneBook::in_memory(db_filename)
+            let mut book = if cache_db {
+                GeneBook::in_memory(&database)
             } else {
-                GeneBook::inline(db_filename)
+                GeneBook::inline(&database)
             }?;
 
             for t in trees.iter_mut() {
@@ -392,34 +379,34 @@ fn main() -> Result<()> {
                 })?
             }
 
-            File::create(value_t!(args, "outfile", String).unwrap_or(filename))?
+            let outfile = args.outfile.unwrap_or(args.infile);
+            File::create(&outfile)?
                 .write_all(out.as_bytes())
-                .with_context(|| anyhow!("Cannot write to output file"))?;
+                .with_context(|| anyhow!("cannot write to `{}`", &outfile))?;
             Ok(())
         }
-        ("taxonize", Some(margs)) => {
+        Command::Taxonize { mapping } => {
             let mut out = String::new();
-            let map_file = value_t!(margs, "mapping", String).unwrap();
 
             for t in trees.iter_mut() {
-                taxonize(t, &map_file).map(|_| {
+                taxonize(t, &mapping).map(|_| {
                     out.push_str(&Newick::to_newick(t).replace('\n', ""));
                     out.push('\n');
                 })?
             }
 
-            File::create(value_t!(args, "outfile", String).unwrap_or(filename))?
+            let outfile = args.outfile.unwrap_or(args.infile);
+            File::create(&outfile)?
                 .write_all(out.as_bytes())
-                .with_context(|| anyhow!("Cannot write to output file"))?;
+                .with_context(|| anyhow!("cannot write to `{}`", &outfile))?;
             Ok(())
         }
-        ("geneize", Some(margs)) => {
+        Command::Geneize { database, cache_db } => {
             let mut out = String::new();
-            let db_filename = margs.value_of("database").unwrap();
-            let mut book = if margs.is_present("cache-db") {
-                GeneBook::in_memory(db_filename)
+            let mut book = if cache_db {
+                GeneBook::in_memory(&database)
             } else {
-                GeneBook::inline(db_filename)
+                GeneBook::inline(&database)
             }?;
 
             for t in trees.iter_mut() {
@@ -428,11 +415,12 @@ fn main() -> Result<()> {
                     out.push('\n');
                 })?
             }
-            File::create(value_t!(args, "outfile", String).unwrap_or(filename))?
+
+            let outfile = args.outfile.unwrap_or(args.infile);
+            File::create(&outfile)?
                 .write_all(out.as_bytes())
-                .with_context(|| anyhow!("cannot write to out file"))?;
+                .with_context(|| anyhow!("cannot write to `{}`", &outfile))?;
             Ok(())
         }
-        _ => unimplemented!(),
     }
 }
