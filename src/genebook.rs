@@ -7,10 +7,15 @@ use std::sync::Mutex;
 pub enum GeneBook {
     InMemory(HashMap<String, Gene>),
     Cached(HashMap<String, Gene>),
-    Inline(Mutex<Connection>),
+    Inline {
+        mutex: Mutex<Connection>,
+        ids: String,
+        to: String,
+        species: String,
+    },
 }
 
-#[derive(Clone, Default)]
+#[derive(Clone, Debug)]
 pub struct Gene {
     pub gene: String,
     pub species: String,
@@ -35,9 +40,9 @@ impl GeneBook {
             .into_iter()
             .map(|g| {
                 (
-                    g.1.clone(),
+                    g.0.clone(),
                     Gene {
-                        gene: g.0,
+                        gene: g.1,
                         species: g.2,
                     },
                 )
@@ -45,10 +50,10 @@ impl GeneBook {
             .collect())
     }
 
-    pub fn in_memory(filename: &str) -> Result<Self> {
+    pub fn in_memory(filename: &str, id: &str, to: &str, species: &str) -> Result<Self> {
         let conn = Connection::open(filename)
             .with_context(|| format!("while connecting to {}", filename))?;
-        let query = conn.prepare("SELECT gene, protein, species FROM genomes")?;
+        let query = conn.prepare(&format!("SELECT {}, {}, {} FROM genomes", id, to, species))?;
         let r = Self::get_rows(query, [])?;
         Ok(GeneBook::InMemory(r))
     }
@@ -58,7 +63,7 @@ impl GeneBook {
         let conn = Connection::open(filename)
             .with_context(|| format!("while connecting to {}", filename))?;
         let query = conn.prepare(&format!(
-            "SELECT gene, protein, species FROM genomes WHERE protein IN ({})",
+            "SELECT gene, protein, species FROM genomes WHERE protein IN ({})", // XXX
             std::iter::repeat("?")
                 .take(ids.len())
                 .collect::<Vec<_>>()
@@ -72,10 +77,15 @@ impl GeneBook {
     }
 
     #[allow(dead_code)]
-    pub fn inline(filename: &str) -> Result<Self> {
+    pub fn inline(filename: &str, from: &str, to: &str, species: &str) -> Result<Self> {
         let conn = Connection::open(filename)
             .with_context(|| format!("while connecting to {}", filename))?;
-        Ok(GeneBook::Inline(Mutex::new(conn)))
+        Ok(GeneBook::Inline {
+            mutex: Mutex::new(conn),
+            ids: from.to_owned(),
+            to: to.to_owned(),
+            species: species.to_owned(),
+        })
     }
 
     pub fn get(&self, g: &str) -> Result<Gene> {
@@ -83,14 +93,21 @@ impl GeneBook {
             GeneBook::InMemory(book) | GeneBook::Cached(book) => {
                 book.get(g).cloned().ok_or_else(|| anyhow!("key not found"))
             }
-            GeneBook::Inline(conn_mutex) => {
-                let conn = conn_mutex.lock().expect("MUTEX POISONING");
-                let mut query =
-                    conn.prepare("SELECT gene, protein, species FROM genomes WHERE protein=?")?;
+            GeneBook::Inline {
+                mutex,
+                ids,
+                to,
+                species,
+            } => {
+                let conn = mutex.lock().expect("MUTEX POISONING");
+                let mut query = conn.prepare(&format!(
+                    "SELECT {}, {}, {} FROM genomes WHERE {}=?",
+                    ids, to, species, ids
+                ))?;
                 query
                     .query_row(&[g], |r| {
-                        let gene = r.get::<_, String>(0)?;
-                        let species = r.get::<_, String>(5)?;
+                        let gene = r.get::<_, String>(1)?;
+                        let species = r.get::<_, String>(2)?;
 
                         rusqlite::Result::Ok(Gene { gene, species })
                     })
