@@ -1,6 +1,5 @@
 use clap::*;
 use newick::*;
-use rusqlite::*;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::fs::File;
@@ -8,7 +7,7 @@ use std::hash::Hash;
 use std::io::prelude::*;
 use std::io::BufReader;
 
-use anyhow::{anyhow, bail, Context, Result};
+use anyhow::{anyhow, Context, Result};
 
 mod genebook;
 use genebook::GeneBook;
@@ -51,13 +50,13 @@ fn effective_losses(
 
         let mut r_large = 0;
         let mut r_all = 0;
-        let mut missing = missing.into_iter().copied().collect::<Vec<_>>();
+        let mut missing = missing.iter().copied().collect::<Vec<_>>();
 
         while !missing.is_empty() {
             let mut mrca = missing[0];
             let mut current: Vec<usize> = vec![mrca];
             if log {
-                println!("Current: {:?}", id2names(&current, &species));
+                println!("Current: {:?}", id2names(&current, species));
             }
 
             'goup: loop {
@@ -67,7 +66,7 @@ fn effective_losses(
                     .filter(|x| actual_species.contains(x))
                     .collect::<Vec<_>>();
                 if log {
-                    println!("Candidates: {:?}", id2names(&candidates, &species));
+                    println!("Candidates: {:?}", id2names(&candidates, species));
                 }
 
                 if !candidates.is_empty() && candidates.iter().all(|x| missing.contains(x)) {
@@ -87,7 +86,7 @@ fn effective_losses(
                 eprintln!(
                     "Loss |{}|: {:?}",
                     current.len(),
-                    id2names(&current, &species)
+                    id2names(&current, species)
                 );
             }
             r_all += 1;
@@ -113,7 +112,7 @@ fn annotate_duplications(t: &mut NewickTree, species_tree: &NewickTree, filter_s
                 .map(|name| {
                     species_tree
                         .find_leaf(|n| n.name.as_ref().unwrap().as_str() == name.as_str())
-                        .expect(&format!("{} not found in species tree", name))
+                        .unwrap_or_else(|| panic!("{} not found in species tree", name))
                 })
                 .collect::<HashSet<_>>(),
         )
@@ -190,7 +189,7 @@ fn annotate_mrcas(t: &mut NewickTree, species_tree: &NewickTree) -> Result<()> {
                     .map(|s| {
                         species_tree
                             .find_leaf(|l| l.name.as_ref().unwrap().as_str() == s.as_str())
-                            .ok_or(anyhow!(format!("{} not found in species tree", s)))
+                            .ok_or_else(|| anyhow!(format!("{} not found in species tree", s)))
                     })
             })
             .collect::<Result<HashSet<_>>>()?;
@@ -208,7 +207,7 @@ fn geneize(t: &mut NewickTree, book: &mut GeneBook) -> Result<()> {
         if n.data.name.is_some() {
             n.data.name = Some(
                 book.get(n.data.name.as_ref().unwrap())
-                    .expect(&format!("Cannot find {:?}", n.data.name))
+                    .unwrap_or_else(|_| panic!("Cannot find {:?}", n.data.name))
                     .gene,
             )
         }
@@ -223,7 +222,7 @@ fn speciesize(t: &mut NewickTree, book: &mut GeneBook) -> Result<()> {
             n.data.attrs.insert(
                 "S".to_owned(),
                 book.get(n.data.name.as_ref().unwrap())
-                    .expect(&format!("Cannot find {:?}", n.data.name))
+                    .unwrap_or_else(|_| panic!("Cannot find {:?}", n.data.name))
                     .species,
             );
         }
@@ -239,7 +238,7 @@ fn taxonize(t: &mut NewickTree, map_file: &str) -> Result<()> {
             l.ok().and_then(|l| {
                 let mut s = l.split('\t');
                 let src = s.next()?.to_owned().parse::<usize>().ok()?;
-                let tgt = s.next()?.replace(' ', ".").to_owned();
+                let tgt = s.next()?.replace(' ', ".");
                 Some((src, tgt))
             })
         })
@@ -365,39 +364,37 @@ fn main() -> Result<()> {
                 .write_all(out.as_bytes())
                 .context(format!("Cannot write to `{}`", filename))
         }
-        ("compress", Some(margs)) => {
+        ("compress", Some(_margs)) => {
             let mut out = String::new();
             for t in trees.iter_mut() {
-                compress(t).and_then(|_| {
+                compress(t).map(|_| {
                     out.push_str(&Newick::to_newick(t).replace('\n', ""));
                     out.push('\n');
-                    Ok(())
                 })?;
             }
             File::create(value_t!(args, "outfile", String).unwrap_or(filename))?
                 .write_all(out.as_bytes())
-                .context(format!("Cannot write to `out.nhx`"))
+                .with_context(|| anyhow!("Cannot write to `out.nhx`"))
         }
         ("speciesize", Some(margs)) => {
             let mut out = String::new();
             let db_filename = margs.value_of("database").unwrap();
             let mut book = if margs.is_present("cache-db") {
-                GeneBook::cached(db_filename)
+                GeneBook::in_memory(db_filename)
             } else {
                 GeneBook::inline(db_filename)
             }?;
 
             for t in trees.iter_mut() {
-                speciesize(t, &mut book).and_then(|_| {
+                speciesize(t, &mut book).map(|_| {
                     out.push_str(&Newick::to_newick(t).replace('\n', ""));
                     out.push('\n');
-                    Ok(())
                 })?
             }
 
             File::create(value_t!(args, "outfile", String).unwrap_or(filename))?
                 .write_all(out.as_bytes())
-                .context(format!("Cannot write to output file"))?;
+                .with_context(|| anyhow!("Cannot write to output file"))?;
             Ok(())
         }
         ("taxonize", Some(margs)) => {
@@ -405,37 +402,35 @@ fn main() -> Result<()> {
             let map_file = value_t!(margs, "mapping", String).unwrap();
 
             for t in trees.iter_mut() {
-                taxonize(t, &map_file).and_then(|_| {
+                taxonize(t, &map_file).map(|_| {
                     out.push_str(&Newick::to_newick(t).replace('\n', ""));
                     out.push('\n');
-                    Ok(())
                 })?
             }
 
             File::create(value_t!(args, "outfile", String).unwrap_or(filename))?
                 .write_all(out.as_bytes())
-                .context(format!("Cannot write to output file"))?;
+                .with_context(|| anyhow!("Cannot write to output file"))?;
             Ok(())
         }
         ("geneize", Some(margs)) => {
             let mut out = String::new();
             let db_filename = margs.value_of("database").unwrap();
             let mut book = if margs.is_present("cache-db") {
-                GeneBook::cached(db_filename)
+                GeneBook::in_memory(db_filename)
             } else {
                 GeneBook::inline(db_filename)
             }?;
 
             for t in trees.iter_mut() {
-                geneize(t, &mut book).and_then(|_| {
+                geneize(t, &mut book).map(|_| {
                     out.push_str(&Newick::to_newick(t).replace('\n', ""));
                     out.push('\n');
-                    Ok(())
                 })?
             }
             File::create(value_t!(args, "outfile", String).unwrap_or(filename))?
                 .write_all(out.as_bytes())
-                .context(format!("Cannot write to out file"))?;
+                .with_context(|| anyhow!("cannot write to out file"))?;
             Ok(())
         }
         _ => unimplemented!(),
