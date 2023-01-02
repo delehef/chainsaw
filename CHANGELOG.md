@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.1.1] - 2023-01-02
+
+### Features
+
+- More flexible convert action replaces geneize
+- Rename ids to id
+
 ## [1.1.0] - 2023-01-02
 
 ### Miscellaneous Tasks
@@ -10,6 +17,7 @@ All notable changes to this project will be documented in this file.
 - Clippy
 - Missing dependency
 - Update clap to v3
+- Release chainsaw version 1.1.0
 
 ### Refactor
 
