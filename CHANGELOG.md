@@ -2,11 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.4.0] - 2023-01-03
+
+### Features
+
+- Add a normalize action to reconcile with ENSEMBL gff3s
+
 ## [1.3.0] - 2023-01-03
 
 ### Features
 
 - Add a leaves command
+
+### Miscellaneous Tasks
+
+- Release chainsaw version 1.3.0
 
 ## [1.2.0] - 2023-01-03
 
