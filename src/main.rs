@@ -81,13 +81,15 @@ enum Command {
     /// compress root nodes with a single child
     Compress,
 
-    /// Convert a newick-formatted tree to a phyl-formatted tree
+    /// convert a newick-formatted tree to a phyl-formatted tree
     ToPhy {},
+
+    /// list the leaves of the given tree
+    Leaves {},
 }
 
 fn main() -> Result<()> {
     let args = Args::parse();
-    println!("Parsing {}", &args.infile);
     let mut trees: Vec<NewickTree> = newick::from_filename(&args.infile)
         .with_context(|| format!("failed to parse {}", &args.infile))?;
 
@@ -96,7 +98,6 @@ fn main() -> Result<()> {
             let mut out = String::new();
             let species_tree = newick::one_from_filename(&species_tree)
                 .context(format!("while parsing {}", &species_tree))?;
-            println!("Processing {} trees", trees.len());
             for t in trees.iter_mut() {
                 actions::annotate_duplications(t, &species_tree, true);
                 actions::annotate_mrcas(t, &species_tree)?;
@@ -199,13 +200,21 @@ fn main() -> Result<()> {
             );
             let mut out = File::create(&outfile)?;
 
-            for t in trees.iter_mut() {
+            for t in trees.iter() {
                 out.write_all(actions::to_phy(t)?.as_bytes())
                     .with_context(|| anyhow!("cannot write to `{}`", &outfile))?;
                 out.write_all("\n".as_bytes())
                     .with_context(|| anyhow!("cannot write to `{}`", &outfile))?;
             }
 
+            Ok(())
+        }
+        Command::Leaves {} => {
+            for t in trees.iter() {
+                t.leaves()
+                    .filter_map(|l| t[l].data.name.as_ref())
+                    .for_each(|n| println!("{}", n));
+            }
             Ok(())
         }
     }
