@@ -86,6 +86,9 @@ enum Command {
 
     /// list the leaves of the given tree
     Leaves {},
+
+    /// normalize a species tree according to ENSEMBL naming conventions
+    Normalize {},
 }
 
 fn main() -> Result<()> {
@@ -214,6 +217,19 @@ fn main() -> Result<()> {
                 t.leaves()
                     .filter_map(|l| t[l].data.name.as_ref())
                     .for_each(|n| println!("{}", n));
+            }
+            Ok(())
+        }
+        Command::Normalize {} => {
+            let outfile = args.outfile.unwrap_or(args.infile);
+            let mut out = File::create(&outfile)?;
+
+            for t in trees.iter_mut() {
+                actions::normalize(t);
+                out.write_all(&Newick::to_newick(t).replace('\n', "").as_bytes())
+                    .with_context(|| anyhow!("cannot write to `{}`", &outfile))?;
+                out.write_all("\n".as_bytes())
+                    .with_context(|| anyhow!("cannot write to `{}`", &outfile))?;
             }
             Ok(())
         }

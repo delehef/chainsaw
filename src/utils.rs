@@ -94,3 +94,11 @@ pub fn effective_losses(
     let (rr_all, rr_large) = els_oneside(&missing_right, species, actual_species);
     (lr_all + rr_all, lr_large + rr_large)
 }
+
+pub fn capitalize(s: &str) -> String {
+    let mut c = s.chars();
+    match c.next() {
+        None => String::new(),
+        Some(f) => f.to_uppercase().collect::<String>() + c.as_str(),
+    }
+}

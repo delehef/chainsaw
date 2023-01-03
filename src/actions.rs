@@ -1,15 +1,15 @@
+use anyhow::*;
+use itertools::Itertools;
+use newick::NewickTree;
 use std::{
     collections::{HashMap, HashSet},
     fs::File,
     io::{BufRead, BufReader},
 };
 
-use anyhow::*;
-use newick::NewickTree;
-
 use crate::{
     genebook::GeneBook,
-    utils::{effective_losses, jaccard},
+    utils::{capitalize, effective_losses, jaccard},
 };
 
 pub fn annotate_duplications(t: &mut NewickTree, species_tree: &NewickTree, filter_species: bool) {
@@ -206,4 +206,45 @@ pub fn to_phy(t: &NewickTree) -> Result<String> {
     let root = t.root();
     rec_to_phy(&mut r, t, root, 0, 0);
     Ok(r)
+}
+
+pub fn normalize(t: &mut NewickTree) {
+    let knowns = [
+        "musmusculus",
+        "cricetulus",
+        "panthera",
+        "peromyscus",
+        "colobus",
+        "mustela",
+        "saimiri",
+    ];
+
+    for n in t.nodes_mut() {
+        if let Some(name) = n.data.name.clone() {
+            let prefix = name
+                .to_lowercase()
+                .replace(|c: char| !c.is_alphanumeric(), "");
+            let is_mus = prefix.starts_with("musmusculus");
+            let mut new_name = name
+                .split('_')
+                .filter(|s| *s != "strain" && *s != "lupus")
+                .filter(|s| {
+                    !(is_mus && (*s == "domesticus" || *s == "reference" || *s == "castaneus"))
+                })
+                .dedup_by(|x, y| *x == "musculus" && *y == "musculus")
+                .take(if knowns.iter().any(|p| prefix.starts_with(p)) {
+                    3
+                } else {
+                    2
+                })
+                .map(|s| s.replace(|c: char| !(c.is_alphanumeric() || c == '.'), ""))
+                .collect::<Vec<String>>()
+                .join(".")
+                .to_lowercase();
+            for r in [("cl57bl6", "c57bl6nj")] {
+                new_name = new_name.replace(r.0, r.1)
+            }
+            n.data.name = Some(capitalize(&new_name));
+        }
+    }
 }
