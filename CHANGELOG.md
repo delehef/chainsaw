@@ -2,12 +2,22 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.0] - 2023-01-03
+
+### Features
+
+- Add long options for arguments
+
 ## [1.1.1] - 2023-01-02
 
 ### Features
 
 - More flexible convert action replaces geneize
 - Rename ids to id
+
+### Miscellaneous Tasks
+
+- Release chainsaw version 1.1.1
 
 ## [1.1.0] - 2023-01-02
 
