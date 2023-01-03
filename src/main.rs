@@ -30,18 +30,18 @@ enum Command {
     /// add duplications & ancestral nodes anntations to a tree
     Annotate {
         /// the species tree to use
-        #[clap(value_parser, short = 'S', long = "species-tree")]
+        #[clap(value_parser, short, long)]
         species_tree: String,
     },
 
     /// annotate leaves in a tree with their species
     Speciesize {
         /// the database containing the id/species mapping
-        #[clap(value_parser, short = 'D', long = "database")]
+        #[clap(value_parser, short, long)]
         database: String,
 
         /// if set, cache the database in memory
-        #[clap(value_parser, short = 'c')]
+        #[clap(value_parser, short)]
         cache_db: bool,
 
         /// the database column corresponding to leaf IDs in the tree
@@ -80,6 +80,9 @@ enum Command {
 
     /// compress root nodes with a single child
     Compress,
+
+    /// Convert a newick-formatted tree to a phyl-formatted tree
+    ToPhy {},
 }
 
 fn main() -> Result<()> {
@@ -184,6 +187,25 @@ fn main() -> Result<()> {
             File::create(&outfile)?
                 .write_all(out.as_bytes())
                 .with_context(|| anyhow!("cannot write to `{}`", &outfile))?;
+            Ok(())
+        }
+        Command::ToPhy {} => {
+            let outfile = args.outfile.unwrap_or(
+                std::path::Path::new(&args.infile)
+                    .with_extension("phy")
+                    .to_str()
+                    .with_context(|| anyhow!("invalid filename found"))?
+                    .to_owned(),
+            );
+            let mut out = File::create(&outfile)?;
+
+            for t in trees.iter_mut() {
+                out.write_all(actions::to_phy(t)?.as_bytes())
+                    .with_context(|| anyhow!("cannot write to `{}`", &outfile))?;
+                out.write_all("\n".as_bytes())
+                    .with_context(|| anyhow!("cannot write to `{}`", &outfile))?;
+            }
+
             Ok(())
         }
     }

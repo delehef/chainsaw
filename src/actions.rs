@@ -184,3 +184,26 @@ pub fn compress(t: &mut NewickTree) -> Result<()> {
     }
     Ok(())
 }
+
+pub fn to_phy(t: &NewickTree) -> Result<String> {
+    fn rec_to_phy(ax: &mut String, t: &NewickTree, n: usize, d: usize, id: usize) {
+        let node = &t[n];
+        ax.push_str(&format!(
+            "{}{}\n",
+            "\t".repeat(d),
+            node.data
+                .name
+                .as_ref()
+                .cloned()
+                .unwrap_or_else(|| String::from("UKNWN"))
+        ));
+        for c in node.children() {
+            rec_to_phy(ax, t, *c, d + 1, id);
+        }
+    }
+
+    let mut r = String::new();
+    let root = t.root();
+    rec_to_phy(&mut r, t, root, 0, 0);
+    Ok(r)
+}
