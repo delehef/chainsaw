@@ -2,11 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.5.0] - 2023-01-04
+
+### Features
+
+- Add a new `nodes` command
+
 ## [1.4.0] - 2023-01-03
 
 ### Features
 
 - Add a normalize action to reconcile with ENSEMBL gff3s
+
+### Miscellaneous Tasks
+
+- Release chainsaw version 1.4.0
 
 ## [1.3.0] - 2023-01-03
 
