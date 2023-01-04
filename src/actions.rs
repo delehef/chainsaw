@@ -209,42 +209,57 @@ pub fn to_phy(t: &NewickTree) -> Result<String> {
 }
 
 pub fn normalize(t: &mut NewickTree) {
-    let knowns = [
-        "musmusculus",
-        "cricetulus",
-        "panthera",
-        "peromyscus",
-        "colobus",
-        "mustela",
-        "saimiri",
-    ];
+    // let knowns = [
+    //     "musmusculus",
+    //     "cricetulus",
+    //     "panthera",
+    //     "peromyscus",
+    //     "colobus",
+    //     "mustela",
+    //     "saimiri",
+    // ];
 
-    for n in t.nodes_mut() {
+    let mut known_names = HashSet::new();
+
+    for (i, n) in t.nodes_mut().enumerate() {
         if let Some(name) = n.data.name.clone() {
             let prefix = name
                 .to_lowercase()
                 .replace(|c: char| !c.is_alphanumeric(), "");
-            let is_mus = prefix.starts_with("musmusculus");
-            let mut new_name = name
-                .split('_')
-                .filter(|s| *s != "strain" && *s != "lupus")
-                .filter(|s| {
-                    !(is_mus && (*s == "domesticus" || *s == "reference" || *s == "castaneus"))
-                })
-                .dedup_by(|x, y| *x == "musculus" && *y == "musculus")
-                .take(if knowns.iter().any(|p| prefix.starts_with(p)) {
-                    3
-                } else {
-                    2
-                })
-                .map(|s| s.replace(|c: char| !(c.is_alphanumeric() || c == '.'), ""))
-                .collect::<Vec<String>>()
-                .join(".")
-                .to_lowercase();
-            for r in [("cl57bl6", "c57bl6nj")] {
-                new_name = new_name.replace(r.0, r.1)
+            // let is_mus = prefix.starts_with("musmusculus");
+            let mut new_name = capitalize(
+                &name
+                    .split('_')
+                    // .filter(|s| *s != "strain" && *s != "lupus")
+                    // .filter(|s| {
+                    //     !(is_mus && (*s == "domesticus" || *s == "reference" || *s == "castaneus"))
+                    // })
+                    // .dedup_by(|x, y| *x == "musculus" && *y == "musculus")
+                    // .take(if knowns.iter().any(|p| prefix.starts_with(p)) {
+                    //     3
+                    // } else {
+                    //     2
+                    // })
+                    .map(|s| s.replace(|c: char| !(c.is_alphanumeric() || c == '.'), ""))
+                    .collect::<Vec<String>>()
+                    .join(".")
+                    .to_lowercase(),
+            );
+            // for r in [("cl57bl6", "c57bl6nj")] {
+            //     new_name = new_name.replace(r.0, r.1)
+            // }
+
+            if known_names.contains(&new_name) && !n.is_leaf() {
+                eprint!("/!\\ {} already known; replacing with", new_name);
+                new_name = format!(" {}-{}", new_name, i);
+                eprintln!("{}", new_name)
+            } else {
+                known_names.insert(new_name.clone());
             }
-            n.data.name = Some(capitalize(&new_name));
+            n.data.name = Some(new_name);
+        } else if !n.is_leaf() {
+            eprintln!("/!\\ creating an ancestral name");
+            n.data.name = Some(format!("ancestral-{}", i))
         }
     }
 }
