@@ -92,6 +92,12 @@ enum Command {
 
     /// normalize a species tree according to ENSEMBL naming conventions
     Normalize {},
+
+    Prune {
+        /// nodes to recursively remove
+        #[clap(value_parser)]
+        remove: Vec<String>,
+    },
 }
 
 fn main() -> Result<()> {
@@ -242,6 +248,10 @@ fn main() -> Result<()> {
                 out.write_all("\n".as_bytes())
                     .with_context(|| anyhow!("cannot write to `{}`", &outfile))?;
             }
+            Ok(())
+        }
+        Command::Prune { remove } => {
+            dbg!(remove);
             Ok(())
         }
     }
