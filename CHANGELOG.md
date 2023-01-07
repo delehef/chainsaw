@@ -2,11 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.8.2] - 2023-01-07
+
+### Miscellaneous Tasks
+
+- Add missing fields to Cargo.toml
+
 ## [1.8.1] - 2023-01-07
 
 ### Bug Fixes
 
 - Remove debug information
+
+### Miscellaneous Tasks
+
+- Release chainsaw version 1.8.1
 
 ## [1.8.0] - 2023-01-07
 
