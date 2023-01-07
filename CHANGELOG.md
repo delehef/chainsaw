@@ -2,11 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.8.1] - 2023-01-07
+
+### Bug Fixes
+
+- Remove debug information
+
 ## [1.8.0] - 2023-01-07
 
 ### Bug Fixes
 
 - A de-multifurcated node keeps the same attributes as the parent
+
+### Miscellaneous Tasks
+
+- Release chainsaw version 1.8.0
 
 ## [1.7.0] - 2023-01-07
 
