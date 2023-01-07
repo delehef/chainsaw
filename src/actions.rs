@@ -1,5 +1,4 @@
 use anyhow::*;
-use itertools::Itertools;
 use newick::{Newick, NewickTree};
 use std::{
     collections::{HashMap, HashSet},
@@ -241,7 +240,7 @@ pub fn binarize(t: &mut NewickTree) {
                 None,
                 Some(newick::Data {
                     name: t.name(n).map(|n| format!("{}+", n)),
-                    attrs: Default::default(),
+                    attrs: t.attrs(n).clone(),
                 }),
             );
             for c in t.children(n).to_owned().iter().skip(1) {
