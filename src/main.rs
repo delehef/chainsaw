@@ -251,7 +251,21 @@ fn main() -> Result<()> {
             Ok(())
         }
         Command::Prune { remove } => {
-            dbg!(remove);
+            let outfile = args.outfile.unwrap_or(args.infile);
+            let mut out = File::create(&outfile)?;
+
+            for mut t in trees {
+                t.delete_nodes(
+                    &t.nodes()
+                        .filter(|&n| t.name(n).map(|s| remove.contains(s)).unwrap_or(false))
+                        .collect::<Vec<_>>(),
+                );
+                t.prune();
+                out.write_all(Newick::to_newick(&t).as_bytes())
+                    .with_context(|| anyhow!("cannot write to `{}`", &outfile))?;
+                out.write_all("\n".as_bytes())
+                    .with_context(|| anyhow!("cannot write to `{}`", &outfile))?;
+            }
             Ok(())
         }
     }
