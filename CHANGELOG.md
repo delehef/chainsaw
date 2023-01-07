@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## [1.6.0] - 2023-01-04
+## [1.6.0] - 2023-01-07
 
 ### Features
 
@@ -12,6 +12,7 @@ All notable changes to this project will be documented in this file.
 - Add a leaves command
 - Add a normalize action to reconcile with ENSEMBL gff3s
 - Add a new `nodes` command
+- Add a `prune` command
 
 ### Miscellaneous Tasks
 
@@ -27,6 +28,7 @@ All notable changes to this project will be documented in this file.
 - Release chainsaw version 1.3.0
 - Release chainsaw version 1.4.0
 - Release chainsaw version 1.5.0
+- Update newick
 
 ### Refactor
 
