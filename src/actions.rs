@@ -1,6 +1,6 @@
 use anyhow::*;
 use itertools::Itertools;
-use newick::NewickTree;
+use newick::{Newick, NewickTree};
 use std::{
     collections::{HashMap, HashSet},
     fs::File,
@@ -16,7 +16,7 @@ pub fn annotate_duplications(t: &mut NewickTree, species_tree: &NewickTree, filt
     let restricted_species = if filter_species {
         Some(
             t.leaves()
-                .filter_map(|l| t[l].data.attrs.get("S").map(|s| s.to_owned()))
+                .filter_map(|l| t.attrs(l).get("S").map(|s| s.to_owned()))
                 .map(|name| {
                     species_tree
                         .find_leaf(|n| n.name.as_ref().unwrap().as_str() == name.as_str())
@@ -34,7 +34,7 @@ pub fn annotate_duplications(t: &mut NewickTree, species_tree: &NewickTree, filt
             .map(|&c| {
                 t.leaves_of(c)
                     .iter()
-                    .map(|&n| t[n].data.attrs.get("S").map(|s| s.to_owned()).unwrap())
+                    .map(|&n| t.attrs(n).get("S").map(|s| s.to_owned()).unwrap())
                     .map(|s| {
                         species_tree
                             .find_leaf(|l| l.name.as_ref().unwrap().as_str() == s.as_str())
@@ -68,18 +68,14 @@ pub fn annotate_duplications(t: &mut NewickTree, species_tree: &NewickTree, filt
                     species_tree,
                     restricted_species.as_ref().unwrap(),
                 );
-                t[*n].data.attrs.insert("D".to_string(), "Y".to_owned());
-                t[*n].data.attrs.insert("DCS".to_string(), dcs.to_string());
-                t[*n]
-                    .data
-                    .attrs
+                t.attrs_mut(*n).insert("D".to_string(), "Y".to_owned());
+                t.attrs_mut(*n).insert("DCS".to_string(), dcs.to_string());
+                t.attrs_mut(*n)
                     .insert("ELC".to_string(), elc_all.to_string());
-                t[*n]
-                    .data
-                    .attrs
+                t.attrs_mut(*n)
                     .insert("ELLC".to_string(), elc_large.to_string());
             } else {
-                t[*n].data.attrs.insert("D".to_string(), "N".to_owned());
+                t.attrs_mut(*n).insert("D".to_string(), "N".to_owned());
             }
         }
     });
@@ -93,7 +89,7 @@ pub fn annotate_mrcas(t: &mut NewickTree, species_tree: &NewickTree) -> Result<(
             .flat_map(|&c| {
                 t.leaves_of(c)
                     .into_iter()
-                    .map(|n| t[n].data.attrs.get("S").map(|s| s.to_owned()).unwrap())
+                    .map(|n| t.attrs(n).get("S").map(|s| s.to_owned()).unwrap())
                     .map(|s| {
                         species_tree
                             .find_leaf(|l| l.name.as_ref().unwrap().as_str() == s.as_str())
@@ -102,25 +98,19 @@ pub fn annotate_mrcas(t: &mut NewickTree, species_tree: &NewickTree) -> Result<(
             })
             .collect::<Result<HashSet<_>>>()?;
         let mrca = species_tree.mrca(&species).unwrap();
-        t[n].data.attrs.insert(
-            "S".to_owned(),
-            species_tree[mrca].data.name.as_ref().unwrap().to_owned(),
-        );
+        t.attrs_mut(n)
+            .insert("S".to_owned(), species_tree.name(mrca).unwrap().to_owned());
     }
     Ok(())
 }
 
 pub fn convert(t: &mut NewickTree, book: &mut GeneBook) -> Result<()> {
     t.map_leaves(&mut |n| {
-        if n.data.name.is_some() {
-            n.data.name = Some(
-                book.get(n.data.name.as_ref().unwrap())
-                    .unwrap_or_else(|_| {
-                        panic!(
-                            "can not find {:?} in database",
-                            n.data.name.as_ref().unwrap()
-                        )
-                    })
+        if n.data.as_ref().unwrap().name.is_some() {
+            let name = n.data.as_ref().unwrap().name.as_ref().unwrap();
+            n.data.as_mut().unwrap().name = Some(
+                book.get(name)
+                    .unwrap_or_else(|_| panic!("can not find {:?} in database", name))
                     .gene,
             )
         }
@@ -131,11 +121,12 @@ pub fn convert(t: &mut NewickTree, book: &mut GeneBook) -> Result<()> {
 
 pub fn speciesize(t: &mut NewickTree, book: &mut GeneBook) -> Result<()> {
     t.map_leaves(&mut |n| {
-        if n.data.name.is_some() {
-            n.data.attrs.insert(
+        if n.data.as_ref().unwrap().name.is_some() {
+            let name = n.data.as_ref().unwrap().name.as_ref().unwrap().to_owned();
+            n.data.as_mut().unwrap().attrs.insert(
                 "S".to_owned(),
-                book.get(n.data.name.as_ref().unwrap())
-                    .unwrap_or_else(|_| panic!("Cannot find {:?}", n.data.name))
+                book.get(&name)
+                    .unwrap_or_else(|_| panic!("Cannot find {:?}", name))
                     .species,
             );
         }
@@ -158,20 +149,28 @@ pub fn taxonize(t: &mut NewickTree, map_file: &str) -> Result<()> {
         .collect::<HashMap<usize, String>>();
 
     for l in t.nodes_mut() {
-        let taxon_id = l.data.attrs.get("T").and_then(|s| s.parse::<usize>().ok());
-        // .map_err(|e| {
-        //     println!("#children: {}", l.children().len());
-        //     e
-        // });
-        // .context(format!("while parsing taxon {:?}", &l.data.name))?;
+        let taxon_id = l
+            .data
+            .as_ref()
+            .unwrap()
+            .attrs
+            .get("T")
+            .and_then(|s| s.parse::<usize>().ok());
         if let Some(taxon_id) = taxon_id {
             if let Some(species) = map.get(&taxon_id) {
-                l.data.attrs.insert("S".to_string(), species.to_owned());
+                l.data
+                    .as_mut()
+                    .unwrap()
+                    .attrs
+                    .insert("S".to_string(), species.to_owned());
             } else {
                 eprintln!("`{}` has no match in the reference file", taxon_id);
             }
         } else {
-            eprintln!("Node `{:?}` has no taxon specified", l.data.name);
+            eprintln!(
+                "Node `{:?}` has no taxon specified",
+                l.data.as_ref().unwrap().name
+            );
         }
     }
     Ok(())
@@ -187,17 +186,12 @@ pub fn compress(t: &mut NewickTree) -> Result<()> {
 
 pub fn to_phy(t: &NewickTree) -> Result<String> {
     fn rec_to_phy(ax: &mut String, t: &NewickTree, n: usize, d: usize, id: usize) {
-        let node = &t[n];
         ax.push_str(&format!(
             "{}{}\n",
             "\t".repeat(d),
-            node.data
-                .name
-                .as_ref()
-                .cloned()
-                .unwrap_or_else(|| String::from("UKNWN"))
+            t.name(n).cloned().unwrap_or_else(|| String::from("UKNWN"))
         ));
-        for c in node.children() {
+        for c in t[n].children() {
             rec_to_phy(ax, t, *c, d + 1, id);
         }
     }
@@ -209,45 +203,18 @@ pub fn to_phy(t: &NewickTree) -> Result<String> {
 }
 
 pub fn normalize(t: &mut NewickTree) {
-    // let knowns = [
-    //     "musmusculus",
-    //     "cricetulus",
-    //     "panthera",
-    //     "peromyscus",
-    //     "colobus",
-    //     "mustela",
-    //     "saimiri",
-    // ];
-
     let mut known_names = HashSet::new();
 
     for (i, n) in t.nodes_mut().enumerate() {
-        if let Some(name) = n.data.name.clone() {
-            let prefix = name
-                .to_lowercase()
-                .replace(|c: char| !c.is_alphanumeric(), "");
-            // let is_mus = prefix.starts_with("musmusculus");
+        if let Some(name) = n.data.as_ref().unwrap().name.clone() {
             let mut new_name = capitalize(
                 &name
                     .split('_')
-                    // .filter(|s| *s != "strain" && *s != "lupus")
-                    // .filter(|s| {
-                    //     !(is_mus && (*s == "domesticus" || *s == "reference" || *s == "castaneus"))
-                    // })
-                    // .dedup_by(|x, y| *x == "musculus" && *y == "musculus")
-                    // .take(if knowns.iter().any(|p| prefix.starts_with(p)) {
-                    //     3
-                    // } else {
-                    //     2
-                    // })
                     .map(|s| s.replace(|c: char| !(c.is_alphanumeric() || c == '.'), ""))
                     .collect::<Vec<String>>()
                     .join(".")
                     .to_lowercase(),
             );
-            // for r in [("cl57bl6", "c57bl6nj")] {
-            //     new_name = new_name.replace(r.0, r.1)
-            // }
 
             if known_names.contains(&new_name) && !n.is_leaf() {
                 eprint!("/!\\ {} already known; replacing with", new_name);
@@ -256,10 +223,10 @@ pub fn normalize(t: &mut NewickTree) {
             } else {
                 known_names.insert(new_name.clone());
             }
-            n.data.name = Some(new_name);
+            n.data.as_mut().unwrap().name = Some(new_name);
         } else if !n.is_leaf() {
             eprintln!("/!\\ creating an ancestral name");
-            n.data.name = Some(format!("ancestral-{}", i))
+            n.data.as_mut().unwrap().name = Some(format!("ancestral-{}", i))
         }
     }
 }

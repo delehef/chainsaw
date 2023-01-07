@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 use std::hash::Hash;
 
-use newick::NewickTree;
+use newick::{Newick, NewickTree};
 
 pub fn jaccard<T>(a: &HashSet<T>, b: &HashSet<T>) -> f32
 where
@@ -26,7 +26,7 @@ pub fn effective_losses(
     ) -> (usize, usize) {
         fn id2names(xs: &[usize], s: &NewickTree) -> Vec<String> {
             xs.iter()
-                .map(|x| s[*x].data.name.as_ref().unwrap().to_owned())
+                .map(|x| s.name(*x).unwrap().to_owned())
                 .collect::<Vec<_>>()
         }
 

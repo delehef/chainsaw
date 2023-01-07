@@ -278,9 +278,9 @@ checksum = "2dffe52ecf27772e601905b7522cb4ef790d2cc203488bbd0e2fe85fcb74566d"
 
 [[package]]
 name = "newick"
-version = "0.5.0"
+version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bb226aab4adc4e2377d4b9cca055ef3d31d6aa11d9a9fd53e209b7e887457732"
+checksum = "86d68ffedabb980ad67e7fdf073e67c0315bd9972fae5d0e32b51d2d92d602c1"
 dependencies = [
  "pest",
  "pest_derive",
@@ -432,9 +432,9 @@ checksum = "f2dd574626839106c320a323308629dcb1acfc96e32a8cba364ddc61ac23ee83"
 
 [[package]]
 name = "sorbus"
-version = "0.5.0"
+version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e1497866250aac7fc95756274a8feb7c2b40b143601c3b589dc8e164715b8c36"
+checksum = "7c5af6777f5dcb157973b88d7aa18623af87b2f01183c14828719b11a43b1b42"
 
 [[package]]
 name = "strsim"

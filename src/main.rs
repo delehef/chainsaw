@@ -224,7 +224,7 @@ fn main() -> Result<()> {
         Command::Leaves {} => {
             for t in trees.iter() {
                 t.leaves()
-                    .filter_map(|l| t[l].data.name.as_ref())
+                    .filter_map(|l| t.name(l))
                     .for_each(|n| println!("{}", n));
             }
             Ok(())
@@ -232,7 +232,7 @@ fn main() -> Result<()> {
         Command::Nodes {} => {
             for t in trees.iter() {
                 t.nodes()
-                    .filter_map(|n| n.data.name.as_ref())
+                    .filter_map(|n| t.name(n))
                     .for_each(|n| println!("{}", n));
             }
             Ok(())
