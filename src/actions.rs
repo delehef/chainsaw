@@ -230,3 +230,27 @@ pub fn normalize(t: &mut NewickTree) {
         }
     }
 }
+
+pub fn binarize(t: &mut NewickTree) {
+    loop {
+        let todo = t.nodes().find(|n| t.children(*n).len() > 2);
+
+        if let Some(n) = todo {
+            println!("before {:?}", t.children(n));
+            let n2 = t.add_node(
+                None,
+                Some(newick::Data {
+                    name: t.name(n).map(|n| format!("{}+", n)),
+                    attrs: Default::default(),
+                }),
+            );
+            for c in t.children(n).to_owned().iter().skip(1) {
+                t.move_node(*c, n2);
+            }
+            t.move_node(n2, n);
+            println!("after {:?}", t.children(n));
+        } else {
+            break;
+        }
+    }
+}

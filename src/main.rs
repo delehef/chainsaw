@@ -93,11 +93,15 @@ enum Command {
     /// normalize a species tree according to ENSEMBL naming conventions
     Normalize {},
 
+    /// prune the specified nodes from the tree
     Prune {
         /// nodes to recursively remove
         #[clap(value_parser)]
         remove: Vec<String>,
     },
+
+    /// ensure that the provided tree only contains binary speciations
+    Binarize {},
 }
 
 fn main() -> Result<()> {
@@ -125,7 +129,7 @@ fn main() -> Result<()> {
             let mut out = String::new();
             for t in trees.iter_mut() {
                 actions::compress(t).map(|_| {
-                    out.push_str(&Newick::to_newick(t).replace('\n', ""));
+                    out.push_str(&Newick::to_newick(t));
                     out.push('\n');
                 })?;
             }
@@ -149,7 +153,7 @@ fn main() -> Result<()> {
 
             for t in trees.iter_mut() {
                 actions::speciesize(t, &mut book).map(|_| {
-                    out.push_str(&Newick::to_newick(t).replace('\n', ""));
+                    out.push_str(&Newick::to_newick(t));
                     out.push('\n');
                 })?
             }
@@ -165,7 +169,7 @@ fn main() -> Result<()> {
 
             for t in trees.iter_mut() {
                 actions::taxonize(t, &mapping).map(|_| {
-                    out.push_str(&Newick::to_newick(t).replace('\n', ""));
+                    out.push_str(&Newick::to_newick(t));
                     out.push('\n');
                 })?
             }
@@ -191,7 +195,7 @@ fn main() -> Result<()> {
 
             for t in trees.iter_mut() {
                 actions::convert(t, &mut book).map(|_| {
-                    out.push_str(&Newick::to_newick(t).replace('\n', ""));
+                    out.push_str(&Newick::to_newick(t));
                     out.push('\n');
                 })?
             }
@@ -243,7 +247,7 @@ fn main() -> Result<()> {
 
             for t in trees.iter_mut() {
                 actions::normalize(t);
-                out.write_all(Newick::to_newick(t).replace('\n', "").as_bytes())
+                out.write_all(Newick::to_newick(t).as_bytes())
                     .with_context(|| anyhow!("cannot write to `{}`", &outfile))?;
                 out.write_all("\n".as_bytes())
                     .with_context(|| anyhow!("cannot write to `{}`", &outfile))?;
@@ -262,6 +266,19 @@ fn main() -> Result<()> {
                 );
                 t.prune();
                 out.write_all(Newick::to_newick(&t).as_bytes())
+                    .with_context(|| anyhow!("cannot write to `{}`", &outfile))?;
+                out.write_all("\n".as_bytes())
+                    .with_context(|| anyhow!("cannot write to `{}`", &outfile))?;
+            }
+            Ok(())
+        }
+        Command::Binarize {} => {
+            let outfile = args.outfile.unwrap_or(args.infile);
+            let mut out = File::create(&outfile)?;
+
+            for t in trees.iter_mut() {
+                actions::binarize(t);
+                out.write_all(Newick::to_newick(t).as_bytes())
                     .with_context(|| anyhow!("cannot write to `{}`", &outfile))?;
                 out.write_all("\n".as_bytes())
                     .with_context(|| anyhow!("cannot write to `{}`", &outfile))?;
