@@ -2,11 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.8.0] - 2023-01-07
+
+### Bug Fixes
+
+- A de-multifurcated node keeps the same attributes as the parent
+
 ## [1.7.0] - 2023-01-07
 
 ### Features
 
 - Add a `binarize` command
+
+### Miscellaneous Tasks
+
+- Release chainsaw version 1.7.0
 
 ## [1.6.0] - 2023-01-07
 
