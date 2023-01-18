@@ -10,14 +10,13 @@ pub enum GeneBook {
     Inline {
         mutex: Mutex<Connection>,
         ids: String,
-        to: String,
         species: String,
     },
 }
 
 #[derive(Clone, Debug)]
 pub struct Gene {
-    pub gene: String,
+    pub id: String,
     pub species: String,
 }
 
@@ -28,11 +27,7 @@ impl GeneBook {
     ) -> Result<HashMap<String, Gene>> {
         let genes = query
             .query_map(params, |r| {
-                std::result::Result::Ok((
-                    r.get::<_, String>(0)?,
-                    r.get::<_, String>(1)?,
-                    r.get::<_, String>(2)?,
-                ))
+                std::result::Result::Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?))
             })?
             .collect::<Result<Vec<_>, _>>()?;
 
@@ -42,18 +37,18 @@ impl GeneBook {
                 (
                     g.0.clone(),
                     Gene {
-                        gene: g.1,
-                        species: g.2,
+                        id: g.0,
+                        species: g.1,
                     },
                 )
             })
             .collect())
     }
 
-    pub fn in_memory(filename: &str, id: &str, to: &str, species: &str) -> Result<Self> {
+    pub fn in_memory(filename: &str, id: &str, species: &str) -> Result<Self> {
         let conn = Connection::open(filename)
             .with_context(|| format!("while connecting to {}", filename))?;
-        let query = conn.prepare(&format!("SELECT {}, {}, {} FROM genomes", id, to, species))?;
+        let query = conn.prepare(&format!("SELECT {}, {} FROM genomes", id, species))?;
         let r = Self::get_rows(query, [])?;
         Ok(GeneBook::InMemory(r))
     }
@@ -63,7 +58,7 @@ impl GeneBook {
         let conn = Connection::open(filename)
             .with_context(|| format!("while connecting to {}", filename))?;
         let query = conn.prepare(&format!(
-            "SELECT gene, protein, species FROM genomes WHERE protein IN ({})", // XXX
+            "SELECT id, species FROM genomes WHERE id IN ({})", // XXX
             std::iter::repeat("?")
                 .take(ids.len())
                 .collect::<Vec<_>>()
@@ -77,13 +72,12 @@ impl GeneBook {
     }
 
     #[allow(dead_code)]
-    pub fn inline(filename: &str, from: &str, to: &str, species: &str) -> Result<Self> {
+    pub fn inline(filename: &str, from: &str, species: &str) -> Result<Self> {
         let conn = Connection::open(filename)
             .with_context(|| format!("while connecting to {}", filename))?;
         Ok(GeneBook::Inline {
             mutex: Mutex::new(conn),
             ids: from.to_owned(),
-            to: to.to_owned(),
             species: species.to_owned(),
         })
     }
@@ -96,20 +90,19 @@ impl GeneBook {
             GeneBook::Inline {
                 mutex,
                 ids,
-                to,
                 species,
             } => {
                 let conn = mutex.lock().expect("MUTEX POISONING");
                 let mut query = conn.prepare(&format!(
-                    "SELECT {}, {}, {} FROM genomes WHERE {}=?",
-                    ids, to, species, ids
+                    "SELECT {}, {} FROM genomes WHERE {}=?",
+                    ids, species, ids
                 ))?;
                 query
                     .query_row(&[g], |r| {
-                        let gene = r.get::<_, String>(1)?;
-                        let species = r.get::<_, String>(2)?;
+                        let gene = r.get::<_, String>(0)?;
+                        let species = r.get::<_, String>(1)?;
 
-                        rusqlite::Result::Ok(Gene { gene, species })
+                        rusqlite::Result::Ok(Gene { id: gene, species })
                     })
                     .with_context(|| "while accessing DB")
             }

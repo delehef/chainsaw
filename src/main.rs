@@ -30,46 +30,27 @@ enum Command {
     /// add duplications & ancestral nodes anntations to a tree
     Annotate {
         /// the species tree to use
-        #[clap(value_parser, short, long)]
+        #[clap(value_parser, short = 'S', long)]
         species_tree: String,
     },
 
     /// annotate leaves in a tree with their species
     Speciesize {
         /// the database containing the id/species mapping
-        #[clap(value_parser, short, long)]
+        #[clap(value_parser, short = 'D', long)]
         database: String,
 
         /// if set, cache the database in memory
-        #[clap(value_parser, short)]
+        #[clap(value_parser, long)]
         cache_db: bool,
 
         /// the database column corresponding to leaf IDs in the tree
-        #[clap(value_parser, default_value_t = String::from("protein"), long = "id")]
+        #[clap(value_parser, default_value_t = String::from("id"), long)]
         id: String,
 
         /// the database column containing the species
         #[clap(value_parser, default_value_t = String::from("species"))]
         species: String,
-    },
-
-    /// convert ids from proteins to genes
-    Convert {
-        /// the database containing the proteins/genes mapping
-        #[clap(value_parser, short = 'D', long = "database")]
-        database: String,
-
-        /// if set, cache the database in memory
-        #[clap(value_parser, short = 'c')]
-        cache_db: bool,
-
-        /// column in the database corresponding to the current IDs
-        #[clap(value_parser, long = "from")]
-        from: String,
-
-        /// column in the database corresponding to the desired IDs
-        #[clap(value_parser, long = "to")]
-        to: String,
     },
 
     ///
@@ -146,9 +127,9 @@ fn main() -> Result<()> {
         } => {
             let mut out = String::new();
             let mut book = if cache_db {
-                GeneBook::in_memory(&database, &ids, "gene", &species)
+                GeneBook::in_memory(&database, &ids, &species)
             } else {
-                GeneBook::inline(&database, &ids, "gene", &species)
+                GeneBook::inline(&database, &ids, &species)
             }?;
 
             for t in trees.iter_mut() {
@@ -169,32 +150,6 @@ fn main() -> Result<()> {
 
             for t in trees.iter_mut() {
                 actions::taxonize(t, &mapping).map(|_| {
-                    out.push_str(&Newick::to_newick(t));
-                    out.push('\n');
-                })?
-            }
-
-            let outfile = args.outfile.unwrap_or(args.infile);
-            File::create(&outfile)?
-                .write_all(out.as_bytes())
-                .with_context(|| anyhow!("cannot write to `{}`", &outfile))?;
-            Ok(())
-        }
-        Command::Convert {
-            database,
-            cache_db,
-            from,
-            to,
-        } => {
-            let mut out = String::new();
-            let mut book = if cache_db {
-                GeneBook::in_memory(&database, &from, &to, "species")
-            } else {
-                GeneBook::inline(&database, &from, &to, "species")
-            }?;
-
-            for t in trees.iter_mut() {
-                actions::convert(t, &mut book).map(|_| {
                     out.push_str(&Newick::to_newick(t));
                     out.push('\n');
                 })?

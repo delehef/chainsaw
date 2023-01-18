@@ -110,7 +110,7 @@ pub fn convert(t: &mut NewickTree, book: &mut GeneBook) -> Result<()> {
             n.data.as_mut().unwrap().name = Some(
                 book.get(name)
                     .unwrap_or_else(|_| panic!("can not find {:?} in database", name))
-                    .gene,
+                    .id,
             )
         }
     });
