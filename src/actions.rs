@@ -5,11 +5,9 @@ use std::{
     fs::File,
     io::{BufRead, BufReader},
 };
+use syntesuite::genebook::GeneBook;
 
-use crate::{
-    genebook::GeneBook,
-    utils::{capitalize, effective_losses, jaccard},
-};
+use crate::utils::{capitalize, effective_losses, jaccard};
 
 pub fn annotate_duplications(t: &mut NewickTree, species_tree: &NewickTree, filter_species: bool) {
     let restricted_species = if filter_species {
@@ -104,18 +102,7 @@ pub fn annotate_mrcas(t: &mut NewickTree, species_tree: &NewickTree) -> Result<(
 }
 
 pub fn convert(t: &mut NewickTree, book: &mut GeneBook) -> Result<()> {
-    t.map_leaves(&mut |n| {
-        if n.data.as_ref().unwrap().name.is_some() {
-            let name = n.data.as_ref().unwrap().name.as_ref().unwrap();
-            n.data.as_mut().unwrap().name = Some(
-                book.get(name)
-                    .unwrap_or_else(|_| panic!("can not find {:?} in database", name))
-                    .id,
-            )
-        }
-    });
-
-    Ok(())
+    todo!()
 }
 
 pub fn speciesize(t: &mut NewickTree, book: &mut GeneBook) -> Result<()> {

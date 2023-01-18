@@ -5,8 +5,7 @@ use std::io::prelude::*;
 
 use anyhow::{anyhow, Context, Result};
 
-mod genebook;
-use genebook::GeneBook;
+use syntesuite::genebook::GeneBook;
 mod actions;
 mod utils;
 
@@ -122,14 +121,14 @@ fn main() -> Result<()> {
         Command::Speciesize {
             database,
             cache_db,
-            id: ids,
-            species,
+            id,
+            species: _species,
         } => {
             let mut out = String::new();
             let mut book = if cache_db {
-                GeneBook::in_memory(&database, &ids, &species)
+                GeneBook::in_memory(&database, 0, &id)
             } else {
-                GeneBook::inline(&database, &ids, &species)
+                GeneBook::inline(&database, 0, &id)
             }?;
 
             for t in trees.iter_mut() {
