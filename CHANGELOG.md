@@ -2,11 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.8.3] - 2023-01-18
+
+### Miscellaneous Tasks
+
+- Convert to the new database format
+- Switch to syntesuite
+
 ## [1.8.2] - 2023-01-07
 
 ### Miscellaneous Tasks
 
 - Add missing fields to Cargo.toml
+- Release chainsaw version 1.8.2
 
 ## [1.8.1] - 2023-01-07
 
