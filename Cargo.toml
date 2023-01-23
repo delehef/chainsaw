@@ -13,7 +13,7 @@ clap = { version = "3", features = ["derive"] }
 itertools = "0.10"
 newick = "0.7"
 rusqlite = "0.26"
-syntesuite = { git = "https://github.com/delehef/syntesuite" }
+syntesuite = "0.1"
 
 [package.metadata.release]
 tag-prefix = ""
