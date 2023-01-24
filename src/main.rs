@@ -82,6 +82,16 @@ enum Command {
 
     /// ensure that the provided tree only contains binary speciations
     Binarize {},
+
+    /// rename the leaves of a tree following the given mapping file
+    Rename {
+        #[clap(value_parser, short, long = "mapping")]
+        mapping_file: String,
+
+        /// if set, use as a separator in `mapping`; otherwise, split on space
+        #[clap(value_parser, short, long)]
+        separator: Option<String>,
+    },
 }
 
 fn main() -> Result<()> {
@@ -232,6 +242,40 @@ fn main() -> Result<()> {
 
             for t in trees.iter_mut() {
                 actions::binarize(t);
+                out.write_all(Newick::to_newick(t).as_bytes())
+                    .with_context(|| anyhow!("cannot write to `{}`", &outfile))?;
+                out.write_all("\n".as_bytes())
+                    .with_context(|| anyhow!("cannot write to `{}`", &outfile))?;
+            }
+            Ok(())
+        }
+        Command::Rename {
+            mapping_file,
+            separator,
+        } => {
+            let mapping = std::io::BufReader::new(
+                File::open(&mapping_file)
+                    .with_context(|| anyhow!("while opening `{}`", &mapping_file))?,
+            )
+            .lines()
+            .filter_map(|l| {
+                l.ok().and_then(|l| {
+                    let (src, tgt) = if let Some(sep) = separator.as_ref() {
+                        let mut s = l.split(sep);
+                        (s.next()?.to_owned(), s.next()?.to_owned())
+                    } else {
+                        let mut s = l.split_whitespace();
+                        (s.next()?.to_owned(), s.next()?.to_owned())
+                    };
+                    Some((src, tgt))
+                })
+            })
+            .collect::<std::collections::HashMap<String, String>>();
+            let outfile = args.outfile.unwrap_or(args.infile);
+            let mut out = File::create(&outfile)?;
+
+            for t in trees.iter_mut() {
+                actions::rename(t, &mapping);
                 out.write_all(Newick::to_newick(t).as_bytes())
                     .with_context(|| anyhow!("cannot write to `{}`", &outfile))?;
                 out.write_all("\n".as_bytes())

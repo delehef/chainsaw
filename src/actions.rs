@@ -101,10 +101,6 @@ pub fn annotate_mrcas(t: &mut NewickTree, species_tree: &NewickTree) -> Result<(
     Ok(())
 }
 
-pub fn convert(t: &mut NewickTree, book: &mut GeneBook) -> Result<()> {
-    todo!()
-}
-
 pub fn speciesize(t: &mut NewickTree, book: &mut GeneBook) -> Result<()> {
     t.map_leaves(&mut |n| {
         if n.data.as_ref().unwrap().name.is_some() {
@@ -235,6 +231,16 @@ pub fn binarize(t: &mut NewickTree) {
             t.move_node(n2, n);
         } else {
             break;
+        }
+    }
+}
+
+pub fn rename(t: &mut NewickTree, mapping: &HashMap<String, String>) {
+    for l in t.nodes_mut() {
+        if l.data.as_ref().and_then(|d| d.name.as_ref()).is_some() {
+            if let Some(tgt) = mapping.get(l.data.as_ref().unwrap().name.as_ref().unwrap()) {
+                l.data.as_mut().unwrap().name = Some(tgt.clone());
+            }
         }
     }
 }
