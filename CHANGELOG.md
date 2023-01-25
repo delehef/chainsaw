@@ -2,12 +2,22 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.9.1] - 2023-01-25
+
+### Features
+
+- Add running infos
+
 ## [1.9.0] - 2023-01-25
 
 ### Features
 
 - Add a rename command
 - Add remove-ancestors
+
+### Miscellaneous Tasks
+
+- Release chainsaw version 1.9.0
 
 ## [1.8.4] - 2023-01-23
 
