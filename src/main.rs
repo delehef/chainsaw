@@ -92,6 +92,9 @@ enum Command {
         #[clap(value_parser, short, long)]
         separator: Option<String>,
     },
+
+    /// remove the name of the ancestors in a tree
+    RemoveAncestors,
 }
 
 fn main() -> Result<()> {
@@ -276,6 +279,19 @@ fn main() -> Result<()> {
 
             for t in trees.iter_mut() {
                 actions::rename(t, &mapping);
+                out.write_all(Newick::to_newick(t).as_bytes())
+                    .with_context(|| anyhow!("cannot write to `{}`", &outfile))?;
+                out.write_all("\n".as_bytes())
+                    .with_context(|| anyhow!("cannot write to `{}`", &outfile))?;
+            }
+            Ok(())
+        }
+        Command::RemoveAncestors => {
+            let outfile = args.outfile.unwrap_or(args.infile);
+            let mut out = File::create(&outfile)?;
+
+            for t in trees.iter_mut() {
+                actions::remove_ancestors(t);
                 out.write_all(Newick::to_newick(t).as_bytes())
                     .with_context(|| anyhow!("cannot write to `{}`", &outfile))?;
                 out.write_all("\n".as_bytes())
