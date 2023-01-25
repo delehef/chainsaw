@@ -99,8 +99,10 @@ enum Command {
 
 fn main() -> Result<()> {
     let args = Args::parse();
+    eprintln!("Parsing input...");
     let mut trees: Vec<NewickTree> = newick::from_filename(&args.infile)
         .with_context(|| format!("failed to parse {}", &args.infile))?;
+    eprintln!("Done.");
 
     match args.command {
         Command::Annotate { species_tree } => {
@@ -290,7 +292,11 @@ fn main() -> Result<()> {
             let outfile = args.outfile.unwrap_or(args.infile);
             let mut out = File::create(&outfile)?;
 
-            for t in trees.iter_mut() {
+            let total = trees.len();
+            for (i, t) in trees.iter_mut().enumerate() {
+                if i % 100 == 0 {
+                    println!("{i}/{total}");
+                }
                 actions::remove_ancestors(t);
                 out.write_all(Newick::to_newick(t).as_bytes())
                     .with_context(|| anyhow!("cannot write to `{}`", &outfile))?;
