@@ -1,4 +1,5 @@
 use anyhow::*;
+use clap::ValueEnum;
 use newick::{Newick, NewickTree};
 use std::{
     collections::{HashMap, HashSet},
@@ -8,6 +9,13 @@ use std::{
 use syntesuite::genebook::GeneBook;
 
 use crate::utils::{capitalize, effective_losses, jaccard};
+
+#[derive(Debug, Clone, ValueEnum)]
+pub(crate) enum Strippable {
+    Ancestors,
+    Attributes,
+    Length,
+}
 
 pub fn annotate_duplications(t: &mut NewickTree, species_tree: &NewickTree, filter_species: bool) {
     let restricted_species = if filter_species {
@@ -245,11 +253,23 @@ pub fn rename(t: &mut NewickTree, mapping: &HashMap<String, String>) {
     }
 }
 
-pub fn remove_ancestors(t: &mut NewickTree) {
-    for l in t.nodes_mut() {
-        if !l.is_leaf() {
-            if let Some(d) = l.data.as_mut() {
-                d.name = None
+pub(crate) fn strip(t: &mut NewickTree, to_strip: &[Strippable]) {
+    for n in t.nodes_mut() {
+        for s in to_strip {
+            match s {
+                Strippable::Ancestors => {
+                    if !n.is_leaf() {
+                        if let Some(d) = n.data.as_mut() {
+                            d.name = None
+                        }
+                    }
+                }
+                Strippable::Attributes => {
+                    if let Some(d) = n.data.as_mut() {
+                        d.attrs.clear()
+                    }
+                }
+                Strippable::Length => n.branch_length = None,
             }
         }
     }

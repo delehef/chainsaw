@@ -93,11 +93,14 @@ enum Command {
         separator: Option<String>,
     },
 
-    /// remove the name of the ancestors in a tree
-    RemoveAncestors,
-
     /// format a newick tree in a humean-readableish way
     Format,
+
+    /// strip the given informations from the given trees
+    Strip {
+        #[clap(value_enum)]
+        to_strip: Vec<actions::Strippable>,
+    },
 }
 
 fn main() -> Result<()> {
@@ -291,25 +294,28 @@ fn main() -> Result<()> {
             }
             Ok(())
         }
-        Command::RemoveAncestors => {
-            let outfile = args.outfile.unwrap_or(args.infile);
-            let mut out = File::create(&outfile)?;
-
-            for t in trees.iter_mut() {
-                actions::remove_ancestors(t);
-                out.write_all(Newick::to_newick(t).as_bytes())
-                    .with_context(|| anyhow!("cannot write to `{}`", &outfile))?;
-                out.write_all("\n".as_bytes())
-                    .with_context(|| anyhow!("cannot write to `{}`", &outfile))?;
-            }
-            Ok(())
-        }
         Command::Format => {
             let outfile = args.outfile.unwrap_or(args.infile);
             let mut out = File::create(&outfile)?;
 
             for t in trees {
-                out.write_all(Newick::to_newick(&t).as_bytes())?
+                out.write_all(Newick::to_newick(&t).as_bytes())
+                    .with_context(|| anyhow!("cannot write to `{}`", &outfile))?;
+            }
+            Ok(())
+        }
+        Command::Strip { to_strip } => {
+            println!("Stripping {:?}", to_strip);
+
+            let outfile = args.outfile.unwrap_or(args.infile);
+            let mut out = File::create(&outfile)?;
+
+            for t in trees.iter_mut() {
+                actions::strip(t, &to_strip);
+                out.write_all(Newick::to_newick(t).as_bytes())
+                    .with_context(|| anyhow!("cannot write to `{}`", &outfile))?;
+                out.write_all("\n".as_bytes())
+                    .with_context(|| anyhow!("cannot write to `{}`", &outfile))?;
             }
             Ok(())
         }
