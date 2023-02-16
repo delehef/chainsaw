@@ -2,11 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.10.0] - 2023-02-16
+
+### Features
+
+- Replace `RemoveAncestors` with more general `Strip`
+
 ## [1.9.3] - 2023-02-16
 
 ### Miscellaneous Tasks
 
 - Missing dependency
+- Release chainsaw version 1.9.3
 
 ## [1.9.2] - 2023-02-16
 
