@@ -2,11 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.9.2] - 2023-02-16
+
+### Miscellaneous Tasks
+
+- Update dependencies
+
 ## [1.9.1] - 2023-01-25
 
 ### Features
 
 - Add running infos
+
+### Miscellaneous Tasks
+
+- Release chainsaw version 1.9.1
 
 ## [1.9.0] - 2023-01-25
 
