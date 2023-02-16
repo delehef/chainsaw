@@ -248,7 +248,9 @@ pub fn rename(t: &mut NewickTree, mapping: &HashMap<String, String>) {
 pub fn remove_ancestors(t: &mut NewickTree) {
     for l in t.nodes_mut() {
         if !l.is_leaf() {
-            l.data.as_mut().map(|d| d.name = None);
+            if let Some(d) = l.data.as_mut() {
+                d.name = None
+            }
         }
     }
 }

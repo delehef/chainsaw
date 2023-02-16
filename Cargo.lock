@@ -342,9 +342,9 @@ dependencies = [
 
 [[package]]
 name = "newick"
-version = "0.7.0"
+version = "0.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "86d68ffedabb980ad67e7fdf073e67c0315bd9972fae5d0e32b51d2d92d602c1"
+checksum = "3d4d71856c583e7072d1810dc44f6f4a05142a2e75a85c9b3a7f036085d4fab7"
 dependencies = [
  "pest",
  "pest_derive",

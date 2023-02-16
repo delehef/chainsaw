@@ -17,7 +17,7 @@ struct Args {
     infile: String,
 
     /// output file name
-    #[clap(value_parser, short = 'o', long = "out")]
+    #[clap(value_parser, short = 'o', long = "out", global = true)]
     outfile: Option<String>,
 
     #[clap(subcommand)]
@@ -62,16 +62,16 @@ enum Command {
     Compress,
 
     /// convert a newick-formatted tree to a phyl-formatted tree
-    ToPhy {},
+    ToPhy,
 
     /// list the named leaves of the given tree
-    Leaves {},
+    Leaves,
 
     /// list the names nodes of the given tree
-    Nodes {},
+    Nodes,
 
     /// normalize a species tree according to ENSEMBL naming conventions
-    Normalize {},
+    Normalize,
 
     /// prune the specified nodes from the tree
     Prune {
@@ -95,6 +95,9 @@ enum Command {
 
     /// remove the name of the ancestors in a tree
     RemoveAncestors,
+
+    /// format a newick tree in a humean-readableish way
+    Format,
 }
 
 fn main() -> Result<()> {
@@ -292,16 +295,21 @@ fn main() -> Result<()> {
             let outfile = args.outfile.unwrap_or(args.infile);
             let mut out = File::create(&outfile)?;
 
-            let total = trees.len();
-            for (i, t) in trees.iter_mut().enumerate() {
-                if i % 100 == 0 {
-                    println!("{i}/{total}");
-                }
+            for t in trees.iter_mut() {
                 actions::remove_ancestors(t);
                 out.write_all(Newick::to_newick(t).as_bytes())
                     .with_context(|| anyhow!("cannot write to `{}`", &outfile))?;
                 out.write_all("\n".as_bytes())
                     .with_context(|| anyhow!("cannot write to `{}`", &outfile))?;
+            }
+            Ok(())
+        }
+        Command::Format => {
+            let outfile = args.outfile.unwrap_or(args.infile);
+            let mut out = File::create(&outfile)?;
+
+            for t in trees {
+                out.write_all(Newick::to_newick(&t).as_bytes())?
             }
             Ok(())
         }
