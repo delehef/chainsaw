@@ -15,6 +15,10 @@ newick = "0.7.1"
 rusqlite = "0.26"
 syntesuite = "0.1"
 
+[lib]
+name = "chainsaw"
+path = "src/lib.rs"
+
 [package.metadata.release]
 tag-prefix = ""
 publish = false

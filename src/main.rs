@@ -3,7 +3,7 @@ use newick::*;
 use std::fs::File;
 use std::io::prelude::*;
 
-use anyhow::{anyhow, Context, Result};
+use anyhow::{anyhow, bail, Context, Result};
 
 use syntesuite::genebook::GeneBook;
 mod actions;
