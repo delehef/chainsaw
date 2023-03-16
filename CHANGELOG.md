@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.11.1] - 2023-03-16
+
+### Miscellaneous Tasks
+
+- Update dependencies
+
 ## [1.11.0] - 2023-03-16
 
 ### Features
@@ -23,6 +29,7 @@ All notable changes to this project will be documented in this file.
 - Missing dependency
 - Release chainsaw version 1.9.3
 - Release chainsaw version 1.10.0
+- Release chainsaw version 1.11.0
 
 ## [1.8.3] - 2023-01-18
 
