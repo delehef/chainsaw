@@ -274,3 +274,30 @@ pub(crate) fn strip(t: &mut NewickTree, to_strip: &[Strippable]) {
         }
     }
 }
+
+pub fn tune(t: &mut NewickTree, r: &NewickTree) {
+    fn _tune(t: &mut NewickTree, r: &NewickTree, n: usize, o: usize) {
+        let mines = t.children(n);
+        let others = r.children(o);
+
+        let mut t_children = t.children(o).to_vec();
+        let mut r_children = r.children(o).to_vec();
+
+        let permutation = (0..t.children(n).len()).map(|i| {
+            r_children.sort_by_cached_key(|j| {
+                let t_leaves = t
+                    .leaves_of(i)
+                    .into_iter()
+                    .filter_map(|i| t[i].data.as_ref().and_then(|d| d.name.as_ref()))
+                    .collect::<HashSet<_>>();
+                let r_leaves = r
+                    .leaves_of(*j)
+                    .into_iter()
+                    .filter_map(|j| r[j].data.as_ref().and_then(|d| d.name.as_ref()))
+                    .collect::<HashSet<_>>();
+                t_leaves.intersection(&r_leaves).count()
+            });
+            r_children.pop().unwrap_or(i)
+        });
+    }
+}

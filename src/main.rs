@@ -101,6 +101,10 @@ enum Command {
         #[clap(value_enum)]
         to_strip: Vec<actions::Strippable>,
     },
+    Tune {
+        #[clap(value_parser, short, long = "reference")]
+        reference_tree: String,
+    },
 }
 
 fn main() -> Result<()> {
@@ -317,6 +321,19 @@ fn main() -> Result<()> {
                 out.write_all("\n".as_bytes())
                     .with_context(|| anyhow!("cannot write to `{}`", &outfile))?;
             }
+            Ok(())
+        }
+        Command::Tune { reference_tree } => {
+            if trees.len() != 1 {
+                bail!("tuning is only supported on single trees");
+            }
+            let reference: Vec<NewickTree> = newick::from_filename(&reference_tree)
+                .with_context(|| format!("failed to parse {}", &reference_tree))?;
+            if reference.len() != 1 {
+                bail!("tuning is only supported on single trees");
+            }
+            let reference = &reference[0];
+
             Ok(())
         }
     }
