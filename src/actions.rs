@@ -32,6 +32,7 @@ pub fn annotate_duplications(t: &mut NewickTree, species_tree: &NewickTree, filt
     } else {
         None
     };
+    let all_species: HashSet<_> = species_tree.leaves().collect();
     t.inners().collect::<Vec<_>>().iter().for_each(|n| {
         let species: Vec<HashSet<usize>> = t[*n]
             .children()
@@ -67,12 +68,16 @@ pub fn annotate_duplications(t: &mut NewickTree, species_tree: &NewickTree, filt
 
             if d {
                 let dcs = jaccard(&species[0], &species[1]);
-                let (elc_all, elc_large) = effective_losses(
-                    &species[0],
-                    &species[1],
-                    species_tree,
-                    restricted_species.as_ref().unwrap(),
-                );
+                let (elc_all, elc_large) = if restricted_species.is_some() {
+                    effective_losses(
+                        &species[0],
+                        &species[1],
+                        species_tree,
+                        restricted_species.as_ref().unwrap(),
+                    )
+                } else {
+                    effective_losses(&species[0], &species[1], species_tree, &all_species)
+                };
                 t.attrs_mut(*n).insert("D".to_string(), "Y".to_owned());
                 t.attrs_mut(*n).insert("DCS".to_string(), dcs.to_string());
                 t.attrs_mut(*n)
