@@ -2,11 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.11.2] - 2023-03-16
+
+### Bug Fixes
+
+- Missing default case
+
 ## [1.11.1] - 2023-03-16
 
 ### Miscellaneous Tasks
 
 - Update dependencies
+- Release chainsaw version 1.11.1
 
 ## [1.11.0] - 2023-03-16
 
