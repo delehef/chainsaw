@@ -44,7 +44,7 @@ pub fn annotate_duplications(t: &mut NewickTree, species_tree: &NewickTree, filt
                     .map(|s| {
                         species_tree
                             .find_leaf(|l| l.name.as_ref().unwrap().as_str() == s.as_str())
-                            .unwrap()
+                            .expect(&format!("{} not found in species tree", s))
                     })
                     .collect()
             })
@@ -52,6 +52,7 @@ pub fn annotate_duplications(t: &mut NewickTree, species_tree: &NewickTree, filt
         if species.len() >= 2 {
             let mrcas = species
                 .iter()
+                .cloned()
                 .map(|ss| species_tree.mrca(ss).unwrap())
                 .collect::<Vec<_>>();
             let mut d = false;
@@ -106,8 +107,8 @@ pub fn annotate_mrcas(t: &mut NewickTree, species_tree: &NewickTree) -> Result<(
                             .ok_or_else(|| anyhow!(format!("{} not found in species tree", s)))
                     })
             })
-            .collect::<Result<HashSet<_>>>()?;
-        let mrca = species_tree.mrca(&species).unwrap();
+            .collect::<Result<HashSet<usize>>>()?;
+        let mrca = species_tree.mrca(species.iter().cloned()).unwrap();
         t.attrs_mut(n)
             .insert("S".to_owned(), species_tree.name(mrca).unwrap().to_owned());
     }
