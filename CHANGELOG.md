@@ -2,11 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.11.3] - 2023-03-19
+
+### Miscellaneous Tasks
+
+- Update newick
+
 ## [1.11.2] - 2023-03-16
 
 ### Bug Fixes
 
 - Missing default case
+
+### Miscellaneous Tasks
+
+- Release chainsaw version 1.11.2
 
 ## [1.11.1] - 2023-03-16
 
