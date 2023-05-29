@@ -2,11 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.11.4] - 2023-05-29
+
+### Miscellaneous Tasks
+
+- Update dependencies
+- Update dependencies
+
 ## [1.11.3] - 2023-03-19
 
 ### Miscellaneous Tasks
 
 - Update newick
+- Release chainsaw version 1.11.3
 
 ## [1.11.2] - 2023-03-16
 
@@ -29,24 +37,63 @@ All notable changes to this project will be documented in this file.
 
 ### Features
 
+- Add a library version
+
+### Miscellaneous Tasks
+
+- Release chainsaw version 1.11.0
+
+## [1.10.0] - 2023-02-16
+
+### Features
+
+- Replace `RemoveAncestors` with more general `Strip`
+
+### Miscellaneous Tasks
+
+- Release chainsaw version 1.10.0
+
+## [1.9.3] - 2023-02-16
+
+### Miscellaneous Tasks
+
+- Missing dependency
+- Release chainsaw version 1.9.3
+
+## [1.9.2] - 2023-02-16
+
+### Miscellaneous Tasks
+
+- Update dependencies
+- Release chainsaw version 1.9.2
+
+## [1.9.1] - 2023-01-25
+
+### Features
+
+- Add running infos
+
+### Miscellaneous Tasks
+
+- Release chainsaw version 1.9.1
+
+## [1.9.0] - 2023-01-25
+
+### Features
+
 - Add a rename command
 - Add remove-ancestors
-- Add running infos
-- Replace `RemoveAncestors` with more general `Strip`
-- Add a library version
+
+### Miscellaneous Tasks
+
+- Release chainsaw version 1.9.0
+
+## [1.8.4] - 2023-01-23
 
 ### Miscellaneous Tasks
 
 - Update dependencies
 - Release chainsaw version 1.8.4
-- Release chainsaw version 1.9.0
-- Release chainsaw version 1.9.1
-- Update dependencies
-- Release chainsaw version 1.9.2
-- Missing dependency
-- Release chainsaw version 1.9.3
-- Release chainsaw version 1.10.0
-- Release chainsaw version 1.11.0
 
 ## [1.8.3] - 2023-01-18
 
