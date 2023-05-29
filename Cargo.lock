@@ -579,9 +579,9 @@ dependencies = [
 
 [[package]]
 name = "syntesuite"
-version = "0.2.1"
+version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f3153fc89e5c67489c7934b109618dcd2a3ea8d125c716cde45da78512e25a52"
+checksum = "668b1ebd6c35b8aa2d8674186b899af4f8335381af0ed34dc85c964c0cd6f76c"
 dependencies = [
  "anyhow",
  "colored",
