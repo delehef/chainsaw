@@ -109,10 +109,8 @@ enum Command {
 
 fn main() -> Result<()> {
     let args = Args::parse();
-    eprintln!("Parsing input...");
     let mut trees: Vec<NewickTree> = newick::from_filename(&args.infile)
         .with_context(|| format!("failed to parse {}", &args.infile))?;
-    eprintln!("Done.");
 
     match args.command {
         Command::Annotate { species_tree } => {
@@ -120,8 +118,8 @@ fn main() -> Result<()> {
             let species_tree = newick::one_from_filename(&species_tree)
                 .context(format!("while parsing {}", &species_tree))?;
             for t in trees.iter_mut() {
-                actions::annotate_duplications(t, &species_tree, true);
                 actions::annotate_mrcas(t, &species_tree)?;
+                actions::annotate_duplications(t, &species_tree, true);
                 out.push_str(&Newick::to_newick(t));
                 out.push('\n');
             }
