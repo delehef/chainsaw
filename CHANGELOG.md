@@ -2,11 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.11.6] - 2023-06-14
+
+### Miscellaneous Tasks
+
+- Downgrade dependencies for Guix
+
 ## [1.11.5] - 2023-06-14
 
 ### Miscellaneous Tasks
 
 - Update dependencies
+- Release chainsaw version 1.11.5
 
 ## [1.11.4] - 2023-05-29
 
