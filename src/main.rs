@@ -120,7 +120,7 @@ fn main() -> Result<()> {
             for t in trees.iter_mut() {
                 actions::annotate_mrcas(t, &species_tree)?;
                 actions::annotate_duplications(t, &species_tree, true);
-                out.push_str(&Newick::to_newick(t));
+                out.push_str(&Newick::to_newick(t, false));
                 out.push('\n');
             }
 
@@ -132,7 +132,7 @@ fn main() -> Result<()> {
             let mut out = String::new();
             for t in trees.iter_mut() {
                 actions::compress(t).map(|_| {
-                    out.push_str(&Newick::to_newick(t));
+                    out.push_str(&Newick::to_newick(t, false));
                     out.push('\n');
                 })?;
             }
@@ -156,7 +156,7 @@ fn main() -> Result<()> {
 
             for t in trees.iter_mut() {
                 actions::speciesize(t, &mut book).map(|_| {
-                    out.push_str(&Newick::to_newick(t));
+                    out.push_str(&Newick::to_newick(t, false));
                     out.push('\n');
                 })?
             }
@@ -172,7 +172,7 @@ fn main() -> Result<()> {
 
             for t in trees.iter_mut() {
                 actions::taxonize(t, &mapping).map(|_| {
-                    out.push_str(&Newick::to_newick(t));
+                    out.push_str(&Newick::to_newick(t, false));
                     out.push('\n');
                 })?
             }
@@ -224,7 +224,7 @@ fn main() -> Result<()> {
 
             for t in trees.iter_mut() {
                 actions::normalize(t);
-                out.write_all(Newick::to_newick(t).as_bytes())
+                out.write_all(Newick::to_newick(t, false).as_bytes())
                     .with_context(|| anyhow!("cannot write to `{}`", &outfile))?;
                 out.write_all("\n".as_bytes())
                     .with_context(|| anyhow!("cannot write to `{}`", &outfile))?;
@@ -242,7 +242,7 @@ fn main() -> Result<()> {
                         .collect::<Vec<_>>(),
                 );
                 t.prune();
-                out.write_all(Newick::to_newick(&t).as_bytes())
+                out.write_all(Newick::to_newick(&t, false).as_bytes())
                     .with_context(|| anyhow!("cannot write to `{}`", &outfile))?;
                 out.write_all("\n".as_bytes())
                     .with_context(|| anyhow!("cannot write to `{}`", &outfile))?;
@@ -255,7 +255,7 @@ fn main() -> Result<()> {
 
             for t in trees.iter_mut() {
                 actions::binarize(t);
-                out.write_all(Newick::to_newick(t).as_bytes())
+                out.write_all(Newick::to_newick(t, false).as_bytes())
                     .with_context(|| anyhow!("cannot write to `{}`", &outfile))?;
                 out.write_all("\n".as_bytes())
                     .with_context(|| anyhow!("cannot write to `{}`", &outfile))?;
@@ -289,7 +289,7 @@ fn main() -> Result<()> {
 
             for t in trees.iter_mut() {
                 actions::rename(t, &mapping);
-                out.write_all(Newick::to_newick(t).as_bytes())
+                out.write_all(Newick::to_newick(t, false).as_bytes())
                     .with_context(|| anyhow!("cannot write to `{}`", &outfile))?;
                 out.write_all("\n".as_bytes())
                     .with_context(|| anyhow!("cannot write to `{}`", &outfile))?;
@@ -301,7 +301,7 @@ fn main() -> Result<()> {
             let mut out = File::create(&outfile)?;
 
             for t in trees {
-                out.write_all(Newick::to_newick(&t).as_bytes())
+                out.write_all(Newick::to_newick(&t, false).as_bytes())
                     .with_context(|| anyhow!("cannot write to `{}`", &outfile))?;
             }
             Ok(())
@@ -314,7 +314,7 @@ fn main() -> Result<()> {
 
             for t in trees.iter_mut() {
                 actions::strip(t, &to_strip);
-                out.write_all(Newick::to_newick(t).as_bytes())
+                out.write_all(Newick::to_newick(t, false).as_bytes())
                     .with_context(|| anyhow!("cannot write to `{}`", &outfile))?;
                 out.write_all("\n".as_bytes())
                     .with_context(|| anyhow!("cannot write to `{}`", &outfile))?;
