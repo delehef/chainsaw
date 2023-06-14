@@ -12,7 +12,7 @@ anyhow = "1"
 clap = { version = "3", features = ["derive"] }
 itertools = "0.10"
 newick = "0.8"
-rusqlite = "0.29"
+rusqlite = "0.26.1" # Don't update (Guix)
 syntesuite = "0.2"
 
 [lib]
