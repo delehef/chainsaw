@@ -2,12 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.11.5] - 2023-06-14
+
+### Miscellaneous Tasks
+
+- Update dependencies
+
 ## [1.11.4] - 2023-05-29
 
 ### Miscellaneous Tasks
 
 - Update dependencies
 - Update dependencies
+- Release chainsaw version 1.11.4
 
 ## [1.11.3] - 2023-03-19
 

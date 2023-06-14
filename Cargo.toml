@@ -1,6 +1,6 @@
 [package]
 name = "chainsaw"
-version = "1.11.4"
+version = "1.11.5"
 edition = "2018"
 license = "LGPL-3.0-or-later"
 description = "A tool to manipulate newick trees"
