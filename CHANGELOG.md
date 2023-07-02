@@ -2,11 +2,28 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.13.0] - 2023-07-02
+
+### Features
+
+- Add a `show` command
+
+## [1.12.10] - 2023-07-02
+
+### Features
+
+- Add a `sort` command
+
+### Miscellaneous Tasks
+
+- Release chainsaw version 1.12.0
+
 ## [1.11.6] - 2023-06-14
 
 ### Miscellaneous Tasks
 
 - Downgrade dependencies for Guix
+- Release chainsaw version 1.11.6
 
 ## [1.11.5] - 2023-06-14
 
@@ -14,11 +31,6 @@ All notable changes to this project will be documented in this file.
 
 - Update dependencies
 - Release chainsaw version 1.11.5
-## [1.12.0] - 2023-07-02
-
-### Features
-
-- Add a `sort` command
 
 ## [1.11.4] - 2023-05-29
 
