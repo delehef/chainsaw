@@ -1,9 +1,9 @@
 use clap::{Parser, Subcommand};
 use newick::*;
-use std::fs::File;
 use std::io::prelude::*;
+use std::{fs::File, println};
 
-use anyhow::{anyhow, bail, Context, Result};
+use anyhow::{anyhow, Context, Result};
 
 use syntesuite::genebook::GeneBook;
 mod actions;
@@ -101,10 +101,9 @@ enum Command {
         #[clap(value_enum)]
         to_strip: Vec<actions::Strippable>,
     },
-    Tune {
-        #[clap(value_parser, short, long = "reference")]
-        reference_tree: String,
-    },
+
+    /// Sort the tree leaves
+    Sort,
 }
 
 fn main() -> Result<()> {
@@ -301,7 +300,7 @@ fn main() -> Result<()> {
             let mut out = File::create(&outfile)?;
 
             for t in trees {
-                out.write_all(Newick::to_newick(&t, false).as_bytes())
+                out.write_all(Newick::to_newick(&t, true).as_bytes())
                     .with_context(|| anyhow!("cannot write to `{}`", &outfile))?;
             }
             Ok(())
@@ -321,17 +320,15 @@ fn main() -> Result<()> {
             }
             Ok(())
         }
-        Command::Tune { reference_tree } => {
-            if trees.len() != 1 {
-                bail!("tuning is only supported on single trees");
-            }
-            let reference: Vec<NewickTree> = newick::from_filename(&reference_tree)
-                .with_context(|| format!("failed to parse {}", &reference_tree))?;
-            if reference.len() != 1 {
-                bail!("tuning is only supported on single trees");
-            }
-            let reference = &reference[0];
+        Command::Sort => {
+            let outfile = args.outfile.unwrap_or(args.infile);
+            let mut out = File::create(&outfile)?;
 
+            for t in trees.iter_mut() {
+                actions::sort(t);
+                out.write_all(Newick::to_newick(t, false).as_bytes())
+                    .with_context(|| anyhow!("cannot write to `{}`", &outfile))?;
+            }
             Ok(())
         }
     }
