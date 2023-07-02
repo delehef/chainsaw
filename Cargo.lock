@@ -74,7 +74,7 @@ checksum = "baf1de4339761588bc0619e3cbc0120ee582ebb74b53b4efbf79117bd2da40fd"
 
 [[package]]
 name = "chainsaw"
-version = "1.11.6"
+version = "1.12.0"
 dependencies = [
  "anyhow",
  "clap",
@@ -330,9 +330,9 @@ dependencies = [
 
 [[package]]
 name = "newick"
-version = "0.8.0"
+version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e7ec1ed7ce64cf96feed77bc109682df282a690cd51ff7614f1716fb16d3861e"
+checksum = "8f32343278a3702a6da46507aaaf3d88b72f4943bbb53712f9bdf9846069ad30"
 dependencies = [
  "pest",
  "pest_derive",
@@ -542,11 +542,12 @@ checksum = "a507befe795404456341dfab10cef66ead4c041f62b8b11bbb92bffe5d0953e0"
 
 [[package]]
 name = "sorbus"
-version = "0.8.1"
+version = "0.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "be15f752caedcce05edd052ab31b4d2f5aed6fdd9afeea5ca89fddb775cc1e9e"
+checksum = "c4b7a60b15342c65b6b445d728335e085b5d4b839dc3c6ecc16481a801830970"
 dependencies = [
  "identity-hash",
+ "thiserror",
 ]
 
 [[package]]

@@ -14,6 +14,11 @@ All notable changes to this project will be documented in this file.
 
 - Update dependencies
 - Release chainsaw version 1.11.5
+## [1.12.0] - 2023-07-02
+
+### Features
+
+- Add a `sort` command
 
 ## [1.11.4] - 2023-05-29
 
