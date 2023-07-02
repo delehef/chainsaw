@@ -11,7 +11,7 @@ description = "A tool to manipulate newick trees"
 anyhow = "1"
 clap = { version = "3", features = ["derive"] }
 itertools = "0.10"
-newick = "0.9"
+newick = "0.10"
 rusqlite = "0.26.1" # Don't update (Guix)
 syntesuite = "0.2"
 

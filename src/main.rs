@@ -1,7 +1,7 @@
 use clap::{Parser, Subcommand};
 use newick::*;
+use std::fs::File;
 use std::io::prelude::*;
-use std::{fs::File, println};
 
 use anyhow::{anyhow, Context, Result};
 
@@ -103,7 +103,23 @@ enum Command {
     },
 
     /// Sort the tree leaves
-    Sort,
+    Sort {
+        #[clap(
+            value_parser,
+            long,
+            help = "if set, sort only according to leave nodes and not inner nodes"
+        )]
+        leaves: bool,
+    },
+
+    /// Display the tree on the standard output
+    Show {
+        #[clap(long, help = "if set, display branch length information")]
+        lengths: bool,
+
+        #[clap(long, help = "if set, show inner nodes")]
+        inners: bool,
+    },
 }
 
 fn main() -> Result<()> {
@@ -240,7 +256,7 @@ fn main() -> Result<()> {
                         .filter(|&n| t.name(n).map(|s| remove.contains(s)).unwrap_or(false))
                         .collect::<Vec<_>>(),
                 );
-                t.prune();
+                t.prune(|n| n.name.is_none());
                 out.write_all(Newick::to_newick(&t, false).as_bytes())
                     .with_context(|| anyhow!("cannot write to `{}`", &outfile))?;
                 out.write_all("\n".as_bytes())
@@ -320,14 +336,27 @@ fn main() -> Result<()> {
             }
             Ok(())
         }
-        Command::Sort => {
+        Command::Sort { leaves } => {
             let outfile = args.outfile.unwrap_or(args.infile);
             let mut out = File::create(&outfile)?;
 
             for t in trees.iter_mut() {
-                actions::sort(t);
+                actions::sort(t, leaves);
                 out.write_all(Newick::to_newick(t, false).as_bytes())
                     .with_context(|| anyhow!("cannot write to `{}`", &outfile))?;
+            }
+            Ok(())
+        }
+        Command::Show { lengths, inners } => {
+            for t in trees.iter_mut() {
+                println!(
+                    "{}",
+                    t.to_string(
+                        |n| n.name.as_ref().map(|n| n.to_owned()).unwrap_or_default(),
+                        |e| if lengths { e.to_string() } else { "".into() },
+                        !inners,
+                    )
+                );
             }
             Ok(())
         }

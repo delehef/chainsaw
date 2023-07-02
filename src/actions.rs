@@ -118,9 +118,9 @@ pub fn annotate_mrcas(t: &mut NewickTree, species_tree: &NewickTree) -> Result<(
 pub fn speciesize(t: &mut NewickTree, book: &mut GeneBook) -> Result<()> {
     let leaves = t.leaves().collect::<Vec<_>>();
     for l in leaves.into_iter() {
-        if t[l].data().unwrap().name.is_some() {
-            let name = t[l].data().unwrap().name.as_ref().unwrap().to_owned();
-            t[l].data_mut().unwrap().attrs.insert(
+        if t[l].data().name.is_some() {
+            let name = t[l].data().name.as_ref().unwrap().to_owned();
+            t[l].data_mut().attrs.insert(
                 "S".to_owned(),
                 book.get(&name)
                     .unwrap_or_else(|_| panic!("Cannot find {:?}", name))
@@ -148,21 +148,19 @@ pub fn taxonize(t: &mut NewickTree, map_file: &str) -> Result<()> {
     for l in t.nodes_mut() {
         let taxon_id = l
             .data_mut()
-            .unwrap()
             .attrs
             .get("T")
             .and_then(|s| s.parse::<usize>().ok());
         if let Some(taxon_id) = taxon_id {
             if let Some(species) = map.get(&taxon_id) {
                 l.data_mut()
-                    .unwrap()
                     .attrs
                     .insert("S".to_string(), species.to_owned());
             } else {
                 eprintln!("`{}` has no match in the reference file", taxon_id);
             }
         } else {
-            eprintln!("Node `{:?}` has no taxon specified", l.data().unwrap().name);
+            eprintln!("Node `{:?}` has no taxon specified", l.data().name);
         }
     }
     Ok(())
@@ -198,7 +196,7 @@ pub fn normalize(t: &mut NewickTree) {
     let mut known_names = HashSet::new();
 
     for (i, n) in t.nodes_mut().enumerate() {
-        if let Some(name) = n.data().unwrap().name.clone() {
+        if let Some(name) = n.data().name.clone() {
             let mut new_name = capitalize(
                 &name
                     .split('_')
@@ -215,10 +213,10 @@ pub fn normalize(t: &mut NewickTree) {
             } else {
                 known_names.insert(new_name.clone());
             }
-            n.data_mut().unwrap().name = Some(new_name);
+            n.data_mut().name = Some(new_name);
         } else if !n.is_leaf() {
             eprintln!("/!\\ creating an ancestral name");
-            n.data_mut().unwrap().name = Some(format!("ancestral-{}", i))
+            n.data_mut().name = Some(format!("ancestral-{}", i))
         }
     }
 }
@@ -230,10 +228,10 @@ pub fn binarize(t: &mut NewickTree) {
         if let Some(n) = todo {
             let n2 = t.add_node(
                 None,
-                Some(newick::Data {
+                newick::Data {
                     name: t.name(n).map(|n| format!("{}+", n)),
                     attrs: t.attrs(n).clone(),
-                }),
+                },
             );
             for c in t.children(n).unwrap().to_owned().iter().skip(1) {
                 t.move_node(*c, n2);
@@ -247,9 +245,9 @@ pub fn binarize(t: &mut NewickTree) {
 
 pub fn rename(t: &mut NewickTree, mapping: &HashMap<String, String>) {
     for l in t.nodes_mut() {
-        if l.data().and_then(|d| d.name.as_ref()).is_some() {
-            if let Some(tgt) = mapping.get(l.data().unwrap().name.as_ref().unwrap()) {
-                l.data_mut().unwrap().name = Some(tgt.clone());
+        if l.data().name.is_some() {
+            if let Some(tgt) = mapping.get(l.data().name.as_ref().unwrap()) {
+                l.data_mut().name = Some(tgt.clone());
             }
         }
     }
@@ -261,22 +259,20 @@ pub fn strip(t: &mut NewickTree, to_strip: &[Strippable]) {
             match s {
                 Strippable::Ancestors => {
                     if !n.is_leaf() {
-                        if let Some(d) = n.data_mut() {
-                            d.name = None
-                        }
+                        n.data_mut().name = None
                     }
                 }
-                Strippable::Attributes => {
-                    if let Some(d) = n.data_mut() {
-                        d.attrs.clear()
-                    }
-                }
+                Strippable::Attributes => n.data_mut().attrs.clear(),
                 Strippable::Length => n.unset_branch(),
             }
         }
     }
 }
 
-pub fn sort(t: &mut NewickTree) {
-    t.sort_by(|x| x.and_then(|y| y.name.as_ref().cloned()).unwrap_or_default())
+pub fn sort(t: &mut NewickTree, leaves_only: bool) {
+    if leaves_only {
+        t.sort_leaves_by(|x| x.name.as_ref().cloned().unwrap_or_default())
+    } else {
+        t.sort_by(|x| x.name.as_ref().cloned().unwrap_or_default())
+    }
 }
