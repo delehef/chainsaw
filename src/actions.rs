@@ -53,7 +53,7 @@ pub fn annotate_duplications(t: &mut NewickTree, species_tree: &NewickTree, filt
             let mrcas = species
                 .iter()
                 .cloned()
-                .map(|ss| species_tree.mrca(ss).unwrap().unwrap())
+                .map(|ss| species_tree.mrca(ss).unwrap())
                 .collect::<Vec<usize>>();
             let mut d = false;
             'find_d: for (i, &m1) in mrcas.iter().enumerate() {
@@ -108,7 +108,7 @@ pub fn annotate_mrcas(t: &mut NewickTree, species_tree: &NewickTree) -> Result<(
                     })
             })
             .collect::<Result<HashSet<usize>>>()?;
-        let mrca = species_tree.mrca(species.iter().cloned()).unwrap().unwrap();
+        let mrca = species_tree.mrca(species.iter().cloned()).unwrap();
         t.attrs_mut(n)
             .insert("S".to_owned(), species_tree.name(mrca).unwrap().to_owned());
     }

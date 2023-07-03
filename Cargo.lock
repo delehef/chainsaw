@@ -330,9 +330,9 @@ dependencies = [
 
 [[package]]
 name = "newick"
-version = "0.10.0"
+version = "0.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "22949c32dbae1e01e14a93ce4d9e1a4b6590fd273267bf6eb5ab2be112f5dbad"
+checksum = "d79aa67022ad531831e8fd504d8904448bd602156a3fda9f425febdb31169c0c"
 dependencies = [
  "pest",
  "pest_derive",
@@ -542,9 +542,9 @@ checksum = "a507befe795404456341dfab10cef66ead4c041f62b8b11bbb92bffe5d0953e0"
 
 [[package]]
 name = "sorbus"
-version = "0.11.0"
+version = "0.12.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1ef79435db2f2fcc8b918b5b5ffb230de77a5512f9ca31cfeed5fa74f0070d16"
+checksum = "d4a22902bcea452effbcad7cca1beb828fdf908c083b1cb5a9316acc46dee9f8"
 dependencies = [
  "identity-hash",
  "thiserror",
