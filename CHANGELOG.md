@@ -2,11 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.14.0] - 2023-07-03
+
+### Miscellaneous Tasks
+
+- Update newick
+
 ## [1.13.0] - 2023-07-02
 
 ### Features
 
 - Add a `show` command
+
+### Miscellaneous Tasks
+
+- Release chainsaw version 1.13.0
 
 ## [1.12.10] - 2023-07-02
 
