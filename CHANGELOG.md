@@ -2,11 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
-## [1.14.1] - 2023-07-16
+## [1.14.1] - 2023-11-29
 
 ### Miscellaneous Tasks
 
-- Update dependencies
+- Update syntesuite
 
 ## [1.14.0] - 2023-07-03
 
