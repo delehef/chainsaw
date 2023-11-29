@@ -13,7 +13,7 @@ clap = { version = "3", features = ["derive"] }
 itertools = "0.10"
 newick = "0.11"
 rusqlite = "0.26.1" # Don't update (Guix)
-syntesuite = "0.3"
+syntesuite = "0.4"
 
 [lib]
 name = "chainsaw"
