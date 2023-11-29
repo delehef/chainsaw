@@ -2,11 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
-## [1.14.1] - 2023-11-29
+## [1.14.2] - 2023-11-29
 
 ### Miscellaneous Tasks
 
+- Update dependencies
+- Release chainsaw version 1.14.1
 - Update syntesuite
+- Release chainsaw version 1.14.1
 
 ## [1.14.0] - 2023-07-03
 
