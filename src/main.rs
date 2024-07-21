@@ -1,12 +1,12 @@
+use anyhow::*;
 use clap::{Parser, Subcommand};
 use newick::*;
 use std::fs::File;
 use std::io::prelude::*;
-
-use anyhow::{anyhow, Context, Result};
-
 use syntesuite::genebook::GeneBook;
+
 mod actions;
+mod editor;
 mod utils;
 
 #[derive(Parser)]
@@ -51,6 +51,9 @@ enum Command {
         #[clap(value_parser, default_value_t = String::from("species"))]
         species: String,
     },
+
+    /// Open the tree in a visual editor
+    Edit {},
 
     ///
     Taxonize {
@@ -155,6 +158,10 @@ fn main() -> Result<()> {
             File::create(&outfile)?
                 .write_all(out.as_bytes())
                 .with_context(|| anyhow!("cannot write to `{}`", &outfile))
+        }
+        Command::Edit {} => {
+            ensure!(trees.len() == 1, "only a single tree can be edited at once");
+            editor::run(args.infile.clone(), trees.pop().unwrap())
         }
         Command::Speciesize {
             database,
