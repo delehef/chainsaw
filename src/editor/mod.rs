@@ -11,26 +11,34 @@ use ratatui::{
     prelude::*,
     style::Style,
     widgets::{
-        Block, Borders, Cell, Row, Scrollbar, ScrollbarOrientation, ScrollbarState, Table,
-        TableState,
+        Block, Borders, Cell, Paragraph, Row, Scrollbar, ScrollbarOrientation, ScrollbarState,
+        Table, TableState,
     },
     Frame, Terminal,
 };
-use std::{collections::HashMap, io};
+use std::{collections::HashMap, io, iter::FromIterator};
+use syntesuite::genebook::Gene;
+
+use crate::utils::{ColorMap, GeneCache, WINDOW};
 
 use self::canvas::Canvas;
 
 mod canvas;
+mod utils;
 
 enum Screen {
     TreeView,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct DispGene {
     name: String,
     species: String,
-    landscape: Option<[Vec<String>; 2]>,
+}
+
+struct LandscapeData {
+    book: GeneCache,
+    colors: ColorMap,
 }
 
 struct States {
@@ -139,7 +147,6 @@ impl CanvassedTree {
                 gene: DispGene {
                     name: t.name(n).cloned().unwrap_or("UNKNWN".into()),
                     species: t.attrs(n).get("S").cloned().unwrap_or("UNKNWN".into()),
-                    landscape: None,
                 },
             };
             clades.append_in(my_clade, current_clade);
@@ -215,7 +222,91 @@ impl CanvassedTree {
         self.current_len
     }
 
-    fn to_rows(&mut self) -> Vec<Row> {
+    fn gene_to_row(
+        graph_line: String,
+        landscape_data: Option<&LandscapeData>,
+        gene: DispGene,
+        dups_nesting: i16,
+        with_fold_indicator: bool,
+    ) -> Row {
+        let landscape = if let Some(Gene {
+            strand,
+            left_landscape,
+            right_landscape,
+            family,
+            ..
+        }) =
+            landscape_data.and_then(|landscape_data| landscape_data.book.get(&gene.name))
+        {
+            Line::from_iter(
+                std::iter::once(Span::from("- ".repeat(WINDOW - left_landscape.len())).dark_gray())
+                    .chain(left_landscape.iter().map(|g| {
+                        Span::from(match g.strand {
+                            syntesuite::Strand::Direct => "▶ ",
+                            syntesuite::Strand::Reverse => "◀ ",
+                            syntesuite::Strand::Unknown => "■ ",
+                        })
+                        .fg({
+                            let color = landscape_data.unwrap().colors.get(&g.family).unwrap();
+                            Color::Rgb(
+                                (color.red() * 255.0).floor() as u8,
+                                (color.green() * 255.0).floor() as u8,
+                                (color.blue() * 255.0).floor() as u8,
+                            )
+                        })
+                    }))
+                    .chain(std::iter::once(
+                        Span::from(match strand {
+                            syntesuite::Strand::Direct => " ▶ ",
+                            syntesuite::Strand::Reverse => " ◀ ",
+                            syntesuite::Strand::Unknown => " ■ ",
+                        })
+                        .fg({
+                            let color = landscape_data.unwrap().colors.get(family).unwrap();
+                            Color::Rgb(
+                                (color.red() * 255.0).floor() as u8,
+                                (color.green() * 255.0).floor() as u8,
+                                (color.blue() * 255.0).floor() as u8,
+                            )
+                        }),
+                    ))
+                    .chain(right_landscape.iter().map(|g| {
+                        Span::from(match g.strand {
+                            syntesuite::Strand::Direct => " ▶",
+                            syntesuite::Strand::Reverse => " ◀",
+                            syntesuite::Strand::Unknown => " ■",
+                        })
+                        .fg({
+                            let color = landscape_data.unwrap().colors.get(&g.family).unwrap();
+                            Color::Rgb(
+                                (color.red() * 255.0).floor() as u8,
+                                (color.green() * 255.0).floor() as u8,
+                                (color.blue() * 255.0).floor() as u8,
+                            )
+                        })
+                    }))
+                    .chain(std::iter::once(
+                        Span::from(" -".repeat(WINDOW - right_landscape.len())).dark_gray(),
+                    )),
+            )
+        } else {
+            Line::from("")
+        };
+        Row::new(vec![
+            if with_fold_indicator {
+                Cell::from("⋮".to_string()).bold().white().on_light_blue()
+            } else {
+                "".into()
+            },
+            graph_line.into(),
+            Cell::from("│".repeat(dups_nesting as usize)).light_blue(),
+            gene.species.clone().into(),
+            gene.name.clone().into(),
+            landscape.into(),
+        ])
+    }
+
+    fn to_rows<'a>(&'a mut self, landscape_data: Option<&'a LandscapeData>) -> Vec<Row> {
         #[derive(Debug)]
         struct RowContext {
             current: usize,
@@ -240,13 +331,14 @@ impl CanvassedTree {
                     graph_line,
                 } => {
                     self.screen_to_clade.entry(rows.len()).or_default();
-                    rows.push(Row::new(vec![
-                        Cell::from("│".repeat(*dup_nesting as usize)).light_blue(),
-                        self.canvas.line(*graph_line).into(),
-                        "".into(),
-                        gene.species.clone().into(),
-                        gene.name.clone().into(),
-                    ]));
+                    let row = Self::gene_to_row(
+                        self.canvas.line(*graph_line),
+                        landscape_data,
+                        gene.to_owned(),
+                        *dup_nesting,
+                        false,
+                    );
+                    rows.push(row);
                 }
                 Clade::SubClade { subclades, folded } => {
                     self.screen_to_clade
@@ -260,13 +352,14 @@ impl CanvassedTree {
                             gene,
                         } = self.clades.find_first_taxon(context.current)
                         {
-                            rows.push(Row::new(vec![
-                                Cell::from("│".repeat(*dup_nesting as usize)).light_blue(),
-                                self.canvas.line(*graph_line).into(),
-                                Cell::from("⋮".to_string()).bold().white().on_light_blue(),
-                                gene.species.clone().into(),
-                                gene.name.clone().into(),
-                            ]));
+                            let row = Self::gene_to_row(
+                                self.canvas.line(*graph_line),
+                                landscape_data,
+                                gene.to_owned(),
+                                *dup_nesting,
+                                true,
+                            );
+                            rows.push(row);
                         }
                     } else {
                         for subclade in subclades.iter().rev() {
@@ -279,7 +372,6 @@ impl CanvassedTree {
                 }
             }
         }
-
         self.current_len = rows.len();
         rows
     }
@@ -335,11 +427,17 @@ struct Editor {
     plot: CanvassedTree,
     screen: Screen,
     states: States,
+    landscape_data: Option<LandscapeData>,
 }
 impl Editor {
-    pub fn new(name: String, tree: NewickTree) -> Self {
+    pub fn new(name: String, tree: NewickTree, synteny: Option<(GeneCache, ColorMap)>) -> Self {
         let plot = CanvassedTree::from_newick(&tree);
         let states = States::new(plot.len());
+        let landscape_data = if let Some((book, colors)) = synteny {
+            Some(LandscapeData { book, colors })
+        } else {
+            None
+        };
 
         Self {
             name,
@@ -347,6 +445,7 @@ impl Editor {
             plot,
             screen: Screen::TreeView,
             states,
+            landscape_data,
         }
     }
 
@@ -394,40 +493,47 @@ impl Editor {
             ])
             .split(f.size());
 
-        let title_block = Block::default()
-            .borders(Borders::BOTTOM)
-            .style(Style::default())
-            .title(Line::from(vec![
-                "←".yellow().bold(),
-                " fold 1×  ".into(),
-                "→".yellow().bold(),
-                " unfold 1×  ".into(),
-                "[TAB]".yellow().bold(),
-                " cycle fold  ".into(),
-            ]));
-
-        // let title = Paragraph::new(Text::styled(&self.name, Style::default())).block(title_block);
-        f.render_widget(title_block, chunks[0]);
+        let title = Paragraph::new(Line::from(vec![
+            "[TAB]".yellow().bold(),
+            " cycle fold  ".into(),
+            "←".yellow().bold(),
+            " fold 1×  ".into(),
+            "→".yellow().bold(),
+            " unfold 1×  ".into(),
+        ]))
+        .block(
+            Block::default()
+                .borders(Borders::BOTTOM)
+                .style(Style::default())
+                .title(Line::from(vec![
+                    self.name.as_str().bold(),
+                    ": ".into(),
+                    self.tree.leaves().count().to_string().into(),
+                    " genes".into(),
+                ])),
+        );
+        f.render_widget(title, chunks[0]);
 
         let tree_depth = self.tree.topological_depth().1;
         let dups_width = self.plot.max_dup_nesting();
-        let rows = self.plot.to_rows();
+        let rows = self.plot.to_rows(self.landscape_data.as_ref());
         let widths = [
-            Constraint::Length(dups_width),
-            Constraint::Length((INDENT_FACTOR * tree_depth) as u16),
             Constraint::Length(1),
+            Constraint::Length((INDENT_FACTOR * tree_depth) as u16),
+            Constraint::Length(dups_width),
             Constraint::Fill(1),
             Constraint::Fill(1),
+            Constraint::Fill(3),
         ];
         let table = Table::new(rows, widths)
             .column_spacing(1)
             .header(
-                Row::new(vec!["Dup.", "", "", "Species", "Gene"])
+                Row::new(vec!["", "", "Dup.", "Species", "Gene", "Synteny"])
                     .style(Style::new().bold())
                     .bottom_margin(1),
             )
-            // The selected row and its content can also be styled.
-            .highlight_style(Style::new().reversed());
+            .highlight_symbol(">>")
+            .highlight_style(Style::new().underlined());
 
         f.render_stateful_widget(table, chunks[1], &mut self.states.gene_table);
 
@@ -477,14 +583,18 @@ impl Editor {
     }
 }
 
-pub fn run(name: String, t: NewickTree) -> anyhow::Result<()> {
+pub fn run(
+    name: String,
+    t: NewickTree,
+    synteny: Option<(GeneCache, ColorMap)>,
+) -> anyhow::Result<()> {
     enable_raw_mode()?;
     let mut stdout = io::stdout();
     execute!(stdout, EnterAlternateScreen).context("failed to initialize terminal")?;
     let backend = ratatui::backend::CrosstermBackend::new(stdout);
     let mut terminal = ratatui::Terminal::new(backend)?;
 
-    let mut editor = Editor::new(name, t);
+    let mut editor = Editor::new(name, t, synteny);
     editor.run(&mut terminal)?;
 
     disable_raw_mode()?;

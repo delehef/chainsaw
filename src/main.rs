@@ -53,7 +53,11 @@ enum Command {
     },
 
     /// Open the tree in a visual editor
-    Edit {},
+    Edit {
+        /// the database containing the id/species mapping
+        #[clap(value_parser, short = 'D', long)]
+        database: Option<String>,
+    },
 
     ///
     Taxonize {
@@ -159,9 +163,17 @@ fn main() -> Result<()> {
                 .write_all(out.as_bytes())
                 .with_context(|| anyhow!("cannot write to `{}`", &outfile))
         }
-        Command::Edit {} => {
+        Command::Edit { database } => {
             ensure!(trees.len() == 1, "only a single tree can be edited at once");
-            editor::run(args.infile.clone(), trees.pop().unwrap())
+            let synteny = if let Some(database) = database {
+                let genes = utils::make_genes_cache(&trees[0], &database, "id")?;
+                let colormap = utils::make_colormap(&trees[0], &genes);
+                Some((genes, colormap))
+            } else {
+                None
+            };
+
+            editor::run(args.infile.clone(), trees.pop().unwrap(), synteny)
         }
         Command::Speciesize {
             database,

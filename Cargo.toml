@@ -10,11 +10,14 @@ description = "A tool to manipulate newick trees"
 [dependencies]
 anyhow = "1"
 clap = { version = "3", features = ["derive"] }
+colorsys = "0.6.7"
 itertools = "0.10"
+md5 = "0.7.0"
 newick = "0.11"
 ratatui = "0.27.0"
 rusqlite = "~0.29" # Don't update (Guix)
 syntesuite = "~0.5"
+unicode-blocks = "0.1.9"
 
 [lib]
 name = "chainsaw"
