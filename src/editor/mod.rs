@@ -99,7 +99,7 @@ impl States {
 enum Clade {
     Taxon {
         graph_line: usize,
-        dup_nesting: i16,
+        dup_nesting: Vec<f32>,
         gene: DispGene,
     },
     SubClade {
@@ -163,7 +163,7 @@ const DEPTH_FACTOR: usize = 2;
 struct CanvassedTree {
     settings: TreeSettings,
     canvas: Canvas,
-    dup_level: Vec<i16>,
+    dup_level: Vec<Vec<f32>>,
     current_len: usize,
     // screen coordinate -> clade ID
     screen_to_clade: HashMap<usize, Vec<usize>>,
@@ -176,13 +176,13 @@ impl CanvassedTree {
         current_y: usize,
         current_depth: usize,
         graph: &mut Canvas,
-        dups_nesting: i16,
-        dups: &mut Vec<i16>,
+        mut dups_nesting: Vec<f32>,
+        dups: &mut Vec<Vec<f32>>,
         clades: &mut CladeHierarchy,
         current_clade: usize,
     ) -> usize {
         if t[n].is_leaf() {
-            dups[current_y] = dups_nesting;
+            dups[current_y] = dups_nesting.clone();
             let my_clade = Clade::Taxon {
                 graph_line: current_y,
                 dup_nesting: dups_nesting,
@@ -201,12 +201,16 @@ impl CanvassedTree {
                 },
                 current_clade,
             );
-            let dups_count = if t.is_duplication(n) {
+            if t.is_duplication(n) {
                 graph.write_str(current_y, current_depth, "─D");
-                dups_nesting + 1
+                dups_nesting.push(
+                    t.attrs(n)
+                        .get("DCS")
+                        .map(|x| x.parse::<f32>().unwrap())
+                        .unwrap_or(-1.),
+                );
             } else {
                 graph.write_str(current_y, current_depth, "─┬");
-                dups_nesting
             };
 
             let old_y = current_y;
@@ -233,7 +237,7 @@ impl CanvassedTree {
                     current_y,
                     current_depth + DEPTH_FACTOR,
                     graph,
-                    dups_count,
+                    dups_nesting.clone(),
                     dups,
                     clades,
                     my_clade,
@@ -246,10 +250,20 @@ impl CanvassedTree {
     fn from_newick(t: &NewickTree, settings: TreeSettings) -> Self {
         let leave_count = t.leaves().count();
         let mut canvas = Canvas::new(leave_count, DEPTH_FACTOR * t.topological_depth().1);
-        let mut dups = vec![0; leave_count];
+        let mut dups = vec![vec![]; leave_count];
         let mut clades: CladeHierarchy = CladeHierarchy::new();
 
-        Self::rec_make_tree(t, t.root(), 0, 0, &mut canvas, 0, &mut dups, &mut clades, 0);
+        Self::rec_make_tree(
+            t,
+            t.root(),
+            0,
+            0,
+            &mut canvas,
+            Vec::new(),
+            &mut dups,
+            &mut clades,
+            0,
+        );
 
         Self {
             settings,
@@ -269,7 +283,7 @@ impl CanvassedTree {
         graph_line: String,
         landscape_data: Option<&LandscapeData>,
         gene: DispGene,
-        dups_nesting: i16,
+        dups_nesting: Vec<f32>,
         with_fold_indicator: bool,
         use_symbols: bool,
     ) -> Row {
@@ -338,7 +352,18 @@ impl CanvassedTree {
                 "".into()
             },
             graph_line.into(),
-            Cell::from("│".repeat(dups_nesting as usize)).light_blue(),
+            Cell::from(Line::from(
+                dups_nesting
+                    .iter()
+                    .map(|x| {
+                        Span::from("│").fg(if *x < 0. {
+                            Color::LightBlue
+                        } else {
+                            Color::Rgb(((1. - x) * 255.0).ceil() as u8, (x * 255.).ceil() as u8, 0)
+                        })
+                    })
+                    .collect::<Vec<_>>(),
+            )),
             gene.species.clone().into(),
             gene.name.clone().into(),
             landscape.into(),
@@ -374,7 +399,7 @@ impl CanvassedTree {
                         self.canvas.line(*graph_line),
                         landscape_data,
                         gene.to_owned(),
-                        *dup_nesting,
+                        dup_nesting.clone(),
                         false,
                         self.settings.use_symbols,
                     );
@@ -396,7 +421,7 @@ impl CanvassedTree {
                                 self.canvas.line(*graph_line),
                                 landscape_data,
                                 gene.to_owned(),
-                                *dup_nesting,
+                                dup_nesting.clone(),
                                 true,
                                 self.settings.use_symbols,
                             );
@@ -458,7 +483,7 @@ impl CanvassedTree {
     }
 
     fn max_dup_nesting(&self) -> u16 {
-        self.dup_level.iter().max().cloned().unwrap_or(0) as u16
+        self.dup_level.iter().map(Vec::len).max().unwrap_or(0) as u16
     }
 }
 
