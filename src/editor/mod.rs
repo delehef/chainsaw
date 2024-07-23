@@ -16,7 +16,7 @@ use ratatui::{
     },
     Frame, Terminal,
 };
-use std::{collections::HashMap, io, iter::FromIterator};
+use std::{collections::HashMap, io, iter::FromIterator, ops::Range, sync::OnceLock};
 use syntesuite::genebook::Gene;
 
 use crate::utils::{ColorMap, GeneCache, WINDOW};
@@ -25,6 +25,47 @@ use self::canvas::Canvas;
 
 mod canvas;
 mod utils;
+
+const BLOCKS: &[Range<u32>] = &[
+    // Greek letters
+    0x391..0x39f,
+    0x3b0..0x3ff,
+    // Cyrillic
+    0x400..0x44f,
+    // Armenian
+    0x531..0x54f,
+    // Shapes
+    0x25a0..0x25ff,
+];
+static GENABET: OnceLock<Vec<char>> = OnceLock::new();
+
+#[derive(Clone, Copy)]
+pub struct TreeSettings {
+    pub use_symbols: bool,
+}
+
+#[derive(Clone)]
+pub struct Settings {
+    pub tree: TreeSettings,
+}
+
+fn family_to_char(id: usize) -> char {
+    let chars_len = GENABET.get().unwrap().len();
+
+    GENABET.get().unwrap()[id % chars_len]
+}
+
+fn gene_to_char(family: usize, strand: syntesuite::Strand, symbol: bool) -> char {
+    if symbol {
+        family_to_char(family)
+    } else {
+        match strand {
+            syntesuite::Strand::Direct => '▶',
+            syntesuite::Strand::Reverse => '◀',
+            syntesuite::Strand::Unknown => '■',
+        }
+    }
+}
 
 enum Screen {
     TreeView,
@@ -120,6 +161,7 @@ impl CladeHierarchy {
 const DEPTH_FACTOR: usize = 2;
 
 struct CanvassedTree {
+    settings: TreeSettings,
     canvas: Canvas,
     dup_level: Vec<i16>,
     current_len: usize,
@@ -201,7 +243,7 @@ impl CanvassedTree {
         }
     }
 
-    fn from_newick(t: &NewickTree) -> Self {
+    fn from_newick(t: &NewickTree, settings: TreeSettings) -> Self {
         let leave_count = t.leaves().count();
         let mut canvas = Canvas::new(leave_count, DEPTH_FACTOR * t.topological_depth().1);
         let mut dups = vec![0; leave_count];
@@ -210,6 +252,7 @@ impl CanvassedTree {
         Self::rec_make_tree(t, t.root(), 0, 0, &mut canvas, 0, &mut dups, &mut clades, 0);
 
         Self {
+            settings,
             canvas,
             dup_level: dups,
             current_len: leave_count,
@@ -228,6 +271,7 @@ impl CanvassedTree {
         gene: DispGene,
         dups_nesting: i16,
         with_fold_indicator: bool,
+        use_symbols: bool,
     ) -> Row {
         let landscape = if let Some(Gene {
             strand,
@@ -241,11 +285,10 @@ impl CanvassedTree {
             Line::from_iter(
                 std::iter::once(Span::from("- ".repeat(WINDOW - left_landscape.len())).dark_gray())
                     .chain(left_landscape.iter().map(|g| {
-                        Span::from(match g.strand {
-                            syntesuite::Strand::Direct => "▶ ",
-                            syntesuite::Strand::Reverse => "◀ ",
-                            syntesuite::Strand::Unknown => "■ ",
-                        })
+                        Span::from(format!(
+                            "{} ",
+                            gene_to_char(g.family, g.strand, use_symbols)
+                        ))
                         .fg({
                             let color = landscape_data.unwrap().colors.get(&g.family).unwrap();
                             Color::Rgb(
@@ -255,39 +298,35 @@ impl CanvassedTree {
                             )
                         })
                     }))
-                    .chain(std::iter::once(
-                        Span::from(match strand {
-                            syntesuite::Strand::Direct => " ▶ ",
-                            syntesuite::Strand::Reverse => " ◀ ",
-                            syntesuite::Strand::Unknown => " ■ ",
-                        })
-                        .fg({
-                            let color = landscape_data.unwrap().colors.get(family).unwrap();
-                            Color::Rgb(
-                                (color.red() * 255.0).floor() as u8,
-                                (color.green() * 255.0).floor() as u8,
-                                (color.blue() * 255.0).floor() as u8,
-                            )
-                        }),
-                    ))
-                    .chain(right_landscape.iter().map(|g| {
-                        Span::from(match g.strand {
-                            syntesuite::Strand::Direct => " ▶",
-                            syntesuite::Strand::Reverse => " ◀",
-                            syntesuite::Strand::Unknown => " ■",
-                        })
-                        .fg({
-                            let color = landscape_data.unwrap().colors.get(&g.family).unwrap();
-                            Color::Rgb(
-                                (color.red() * 255.0).floor() as u8,
-                                (color.green() * 255.0).floor() as u8,
-                                (color.blue() * 255.0).floor() as u8,
-                            )
-                        })
-                    }))
-                    .chain(std::iter::once(
-                        Span::from(" -".repeat(WINDOW - right_landscape.len())).dark_gray(),
-                    )),
+                    .chain(
+                        std::iter::once(Span::from(
+                            format!(" {} ", gene_to_char(*family, *strand, use_symbols)).fg({
+                                let color = landscape_data.unwrap().colors.get(family).unwrap();
+                                Color::Rgb(
+                                    (color.red() * 255.0).floor() as u8,
+                                    (color.green() * 255.0).floor() as u8,
+                                    (color.blue() * 255.0).floor() as u8,
+                                )
+                            }),
+                        ))
+                        .chain(right_landscape.iter().map(|g| {
+                            Span::from(format!(
+                                " {}",
+                                gene_to_char(g.family, g.strand, use_symbols)
+                            ))
+                            .fg({
+                                let color = landscape_data.unwrap().colors.get(&g.family).unwrap();
+                                Color::Rgb(
+                                    (color.red() * 255.0).floor() as u8,
+                                    (color.green() * 255.0).floor() as u8,
+                                    (color.blue() * 255.0).floor() as u8,
+                                )
+                            })
+                        }))
+                        .chain(std::iter::once(
+                            Span::from(" -".repeat(WINDOW - right_landscape.len())).dark_gray(),
+                        )),
+                    ),
             )
         } else {
             Line::from("")
@@ -337,6 +376,7 @@ impl CanvassedTree {
                         gene.to_owned(),
                         *dup_nesting,
                         false,
+                        self.settings.use_symbols,
                     );
                     rows.push(row);
                 }
@@ -358,6 +398,7 @@ impl CanvassedTree {
                                 gene.to_owned(),
                                 *dup_nesting,
                                 true,
+                                self.settings.use_symbols,
                             );
                             rows.push(row);
                         }
@@ -430,8 +471,13 @@ struct Editor {
     landscape_data: Option<LandscapeData>,
 }
 impl Editor {
-    pub fn new(name: String, tree: NewickTree, synteny: Option<(GeneCache, ColorMap)>) -> Self {
-        let plot = CanvassedTree::from_newick(&tree);
+    pub fn new(
+        name: String,
+        tree: NewickTree,
+        synteny: Option<(GeneCache, ColorMap)>,
+        settings: Settings,
+    ) -> Self {
+        let plot = CanvassedTree::from_newick(&tree, settings.tree);
         let states = States::new(plot.len());
         let landscape_data = if let Some((book, colors)) = synteny {
             Some(LandscapeData { book, colors })
@@ -551,6 +597,16 @@ impl Editor {
     }
 
     fn run<B: Backend>(&mut self, terminal: &mut Terminal<B>) -> anyhow::Result<()> {
+        GENABET
+            .set(
+                BLOCKS
+                    .iter()
+                    .flat_map(|b| b.clone().into_iter())
+                    .map(|c| char::from_u32(c).unwrap())
+                    .collect(),
+            )
+            .unwrap();
+
         loop {
             terminal.draw(|term| self.render(term))?;
             if let Event::Key(key) = event::read()? {
@@ -587,6 +643,7 @@ pub fn run(
     name: String,
     t: NewickTree,
     synteny: Option<(GeneCache, ColorMap)>,
+    settings: Settings,
 ) -> anyhow::Result<()> {
     enable_raw_mode()?;
     let mut stdout = io::stdout();
@@ -594,7 +651,7 @@ pub fn run(
     let backend = ratatui::backend::CrosstermBackend::new(stdout);
     let mut terminal = ratatui::Terminal::new(backend)?;
 
-    let mut editor = Editor::new(name, t, synteny);
+    let mut editor = Editor::new(name, t, synteny, settings);
     editor.run(&mut terminal)?;
 
     disable_raw_mode()?;

@@ -5,6 +5,8 @@ use std::fs::File;
 use std::io::prelude::*;
 use syntesuite::genebook::GeneBook;
 
+use crate::editor::{Settings, TreeSettings};
+
 mod actions;
 mod editor;
 mod utils;
@@ -57,6 +59,10 @@ enum Command {
         /// the database containing the id/species mapping
         #[clap(value_parser, short = 'D', long)]
         database: Option<String>,
+
+        /// use symbols to draw genes of the same family
+        #[clap(long = "symbolic")]
+        use_symbols: bool,
     },
 
     ///
@@ -163,7 +169,10 @@ fn main() -> Result<()> {
                 .write_all(out.as_bytes())
                 .with_context(|| anyhow!("cannot write to `{}`", &outfile))
         }
-        Command::Edit { database } => {
+        Command::Edit {
+            database,
+            use_symbols,
+        } => {
             ensure!(trees.len() == 1, "only a single tree can be edited at once");
             let synteny = if let Some(database) = database {
                 let genes = utils::make_genes_cache(&trees[0], &database, "id")?;
@@ -173,7 +182,14 @@ fn main() -> Result<()> {
                 None
             };
 
-            editor::run(args.infile.clone(), trees.pop().unwrap(), synteny)
+            editor::run(
+                args.infile.clone(),
+                trees.pop().unwrap(),
+                synteny,
+                Settings {
+                    tree: TreeSettings { use_symbols },
+                },
+            )
         }
         Command::Speciesize {
             database,
