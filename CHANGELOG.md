@@ -2,59 +2,71 @@
 
 All notable changes to this project will be documented in this file.
 
-## [1.14.2] - 2023-11-29
+## [1.14.3] - 2024-08-05
 
-### Miscellaneous Tasks
+### ⚙️ Miscellaneous Tasks
 
 - Update dependencies
-- Release chainsaw version 1.14.1
+
+## [1.14.2] - 2023-11-29
+
+### ⚙️ Miscellaneous Tasks
+
 - Update syntesuite
+- Release chainsaw version 1.14.1
+- Release chainsaw version 1.14.2
+
+## [1.14.1] - 2023-07-16
+
+### ⚙️ Miscellaneous Tasks
+
+- Update dependencies
 - Release chainsaw version 1.14.1
 
 ## [1.14.0] - 2023-07-03
 
-### Miscellaneous Tasks
+### ⚙️ Miscellaneous Tasks
 
 - Update newick
 - Release chainsaw version 1.14.0
 
 ## [1.13.0] - 2023-07-02
 
-### Features
+### 🚀 Features
 
 - Add a `show` command
 
-### Miscellaneous Tasks
+### ⚙️ Miscellaneous Tasks
 
 - Release chainsaw version 1.13.0
 
 ## [1.12.10] - 2023-07-02
 
-### Features
+### 🚀 Features
 
 - Add a `sort` command
 
-### Miscellaneous Tasks
+### ⚙️ Miscellaneous Tasks
 
 - Release chainsaw version 1.12.0
 
 ## [1.11.6] - 2023-06-14
 
-### Miscellaneous Tasks
+### ⚙️ Miscellaneous Tasks
 
 - Downgrade dependencies for Guix
 - Release chainsaw version 1.11.6
 
 ## [1.11.5] - 2023-06-14
 
-### Miscellaneous Tasks
+### ⚙️ Miscellaneous Tasks
 
 - Update dependencies
 - Release chainsaw version 1.11.5
 
 ## [1.11.4] - 2023-05-29
 
-### Miscellaneous Tasks
+### ⚙️ Miscellaneous Tasks
 
 - Update dependencies
 - Update dependencies
@@ -62,93 +74,93 @@ All notable changes to this project will be documented in this file.
 
 ## [1.11.3] - 2023-03-19
 
-### Miscellaneous Tasks
+### ⚙️ Miscellaneous Tasks
 
 - Update newick
 - Release chainsaw version 1.11.3
 
 ## [1.11.2] - 2023-03-16
 
-### Bug Fixes
+### 🐛 Bug Fixes
 
 - Missing default case
 
-### Miscellaneous Tasks
+### ⚙️ Miscellaneous Tasks
 
 - Release chainsaw version 1.11.2
 
 ## [1.11.1] - 2023-03-16
 
-### Miscellaneous Tasks
+### ⚙️ Miscellaneous Tasks
 
 - Update dependencies
 - Release chainsaw version 1.11.1
 
 ## [1.11.0] - 2023-03-16
 
-### Features
+### 🚀 Features
 
 - Add a library version
 
-### Miscellaneous Tasks
+### ⚙️ Miscellaneous Tasks
 
 - Release chainsaw version 1.11.0
 
 ## [1.10.0] - 2023-02-16
 
-### Features
+### 🚀 Features
 
 - Replace `RemoveAncestors` with more general `Strip`
 
-### Miscellaneous Tasks
+### ⚙️ Miscellaneous Tasks
 
 - Release chainsaw version 1.10.0
 
 ## [1.9.3] - 2023-02-16
 
-### Miscellaneous Tasks
+### ⚙️ Miscellaneous Tasks
 
 - Missing dependency
 - Release chainsaw version 1.9.3
 
 ## [1.9.2] - 2023-02-16
 
-### Miscellaneous Tasks
+### ⚙️ Miscellaneous Tasks
 
 - Update dependencies
 - Release chainsaw version 1.9.2
 
 ## [1.9.1] - 2023-01-25
 
-### Features
+### 🚀 Features
 
 - Add running infos
 
-### Miscellaneous Tasks
+### ⚙️ Miscellaneous Tasks
 
 - Release chainsaw version 1.9.1
 
 ## [1.9.0] - 2023-01-25
 
-### Features
+### 🚀 Features
 
 - Add a rename command
 - Add remove-ancestors
 
-### Miscellaneous Tasks
+### ⚙️ Miscellaneous Tasks
 
 - Release chainsaw version 1.9.0
 
 ## [1.8.4] - 2023-01-23
 
-### Miscellaneous Tasks
+### ⚙️ Miscellaneous Tasks
 
 - Update dependencies
 - Release chainsaw version 1.8.4
 
 ## [1.8.3] - 2023-01-18
 
-### Miscellaneous Tasks
+### ⚙️ Miscellaneous Tasks
 
 - Convert to the new database format
 - Switch to syntesuite
@@ -156,106 +168,111 @@ All notable changes to this project will be documented in this file.
 
 ## [1.8.2] - 2023-01-07
 
-### Miscellaneous Tasks
+### ⚙️ Miscellaneous Tasks
 
 - Add missing fields to Cargo.toml
 - Release chainsaw version 1.8.2
 
 ## [1.8.1] - 2023-01-07
 
-### Bug Fixes
+### 🐛 Bug Fixes
 
 - Remove debug information
 
-### Miscellaneous Tasks
+### ⚙️ Miscellaneous Tasks
 
 - Release chainsaw version 1.8.1
 
 ## [1.8.0] - 2023-01-07
 
-### Bug Fixes
+### 🐛 Bug Fixes
 
 - A de-multifurcated node keeps the same attributes as the parent
 
-### Miscellaneous Tasks
+### ⚙️ Miscellaneous Tasks
 
 - Release chainsaw version 1.8.0
 
 ## [1.7.0] - 2023-01-07
 
-### Features
+### 🚀 Features
 
 - Add a `binarize` command
 
-### Miscellaneous Tasks
+### ⚙️ Miscellaneous Tasks
 
 - Release chainsaw version 1.7.0
 
 ## [1.6.0] - 2023-01-07
 
-### Features
+### 🚀 Features
 
 - Add a `prune` command
 
-### Miscellaneous Tasks
+### ⚙️ Miscellaneous Tasks
 
 - Update newick
 - Release chainsaw version 1.6.0
 
 ## [1.5.0] - 2023-01-04
 
-### Features
+### 🚀 Features
 
 - Add a new `nodes` command
 
-### Miscellaneous Tasks
+### ⚙️ Miscellaneous Tasks
 
 - Release chainsaw version 1.5.0
 
 ## [1.4.0] - 2023-01-03
 
-### Features
+### 🚀 Features
 
 - Add a normalize action to reconcile with ENSEMBL gff3s
 
-### Miscellaneous Tasks
+### ⚙️ Miscellaneous Tasks
 
 - Release chainsaw version 1.4.0
 
 ## [1.3.0] - 2023-01-03
 
-### Features
+### 🚀 Features
 
 - Add a leaves command
 
-### Miscellaneous Tasks
+### ⚙️ Miscellaneous Tasks
 
 - Release chainsaw version 1.3.0
 
 ## [1.2.0] - 2023-01-03
 
-### Features
+### 🚀 Features
 
 - Add long options for arguments
 
-### Miscellaneous Tasks
+### ⚙️ Miscellaneous Tasks
 
 - Release chainsaw version 1.2.0
 
 ## [1.1.1] - 2023-01-02
 
-### Features
+### 🚀 Features
 
 - More flexible convert action replaces geneize
 - Rename ids to id
 
-### Miscellaneous Tasks
+### ⚙️ Miscellaneous Tasks
 
 - Release chainsaw version 1.1.1
 
 ## [1.1.0] - 2023-01-02
 
-### Miscellaneous Tasks
+### 🚜 Refactor
+
+- Simplify error flow
+- Update the gene book
+
+### ⚙️ Miscellaneous Tasks
 
 - Add nix files
 - Clippy
@@ -263,14 +280,9 @@ All notable changes to this project will be documented in this file.
 - Update clap to v3
 - Release chainsaw version 1.1.0
 
-### Refactor
-
-- Simplify error flow
-- Update the gene book
-
 ## [1.0.0] - 2022-12-30
 
-### Miscellaneous Tasks
+### ⚙️ Miscellaneous Tasks
 
 - Update dependencies
 - Release chainsaw version 1.0.0
